@@ -265,6 +265,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .sc{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.3cqh;padding:.45em 1.1em;cursor:pointer;text-align:left}
 .sc:hover,.sc:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .sc.on{color:var(--gold);border-color:var(--gold)}
+.sc.off{opacity:.45;cursor:default;letter-spacing:.2em}
 .pg{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.1cqh;padding:.35em 1em;cursor:pointer}
 .pg:hover,.pg:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .pref{display:grid;grid-template-columns:26cqw 1fr;align-items:center;gap:2cqw;max-width:62cqw;margin:0 0 3cqh;font-size:3cqh}
@@ -353,6 +354,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const MUSIC = '__MUSIC__';
   // What the players are told about the build: "версия 1.0" (GAME_VERSION in build.py).
   const VERSION = '__VERSION__';
+  // Release builds (SCENES_LOCKED in build.py): the scene list opens only scenes the reader has reached; the others
+  // are listed without titles and cannot be jumped to (17.10).
+  const LOCKED = '__LOCKED__';
   // The game's logo (logo/logo.png, by the organizer, 15.10): the main menu shows it instead of the chapter name.
   const LOGO = '__LOGO__';
   document.getElementById('ver').textContent = VERSION;
@@ -1338,8 +1342,12 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     }
     if (gmTab === 'scenes') {  // jump straight to a scene instead of clicking through (17.10: was a drop-down at the top)
       const now = sceneNow();
+      // reached = its first step has been read (the `seen` marks); the current scene always counts
+      const reached = (sc) => !LOCKED || sc.id === now || seen.has(steps[at(sc.id)].h);
       gmBody.innerHTML = '<h2 class="gm-h">Сцены</h2><div class="scenes">'
-        + SCRIPT.scenes.map((sc) => '<button type="button" class="sc' + (sc.id === now ? ' on' : '') + '" data-scene="' + esc(sc.id) + '">' + esc(sc.label) + '</button>').join('') + '</div>';
+        + SCRIPT.scenes.map((sc, n) => reached(sc)
+          ? '<button type="button" class="sc' + (sc.id === now ? ' on' : '') + '" data-scene="' + esc(sc.id) + '">' + esc(sc.label) + '</button>'
+          : '<button type="button" class="sc off" disabled aria-label="Сцена ' + (n + 1) + ', ещё не открыта">' + (n + 1) + ' · · ·</button>').join('') + '</div>';
       const on = gmBody.querySelector('.sc.on'); if (on) on.scrollIntoView({ block: 'center' });
       return;
     }

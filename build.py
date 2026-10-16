@@ -52,6 +52,9 @@ MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without 
 # on every publish (the artifact counts those): 1.0 is chapter I as released (15.10), 1.1, 1.2 for its fixes, 2.0
 # with chapter II.
 GAME_VERSION = '1.0'
+# Release builds lock the scene list: a reader can jump only to scenes already reached, the rest are shown without
+# titles (the organizer, 17.10: «чтобы людям было интересно, а то будут скипать»). False while the organizer tests.
+SCENES_LOCKED = False
 CHAPTER = os.path.join(HERE, 'scenario', 'glava1')  # the chapter text, see scenario.py for the format
 SITE = os.path.join(HERE, 'site')
 # Aligning a set takes about a minute, so finished sprites are kept in .cache/sprites/<who>/<look>/<key>/ and reused
@@ -400,13 +403,14 @@ def main():
     music = load_music(only=used_music)
     with open(os.path.join(HERE, 'sobor-1922.tpl.html'), encoding='utf-8') as f:
         html = f.read()
-    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'"):
+    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'"):
         if html.count(key) != 1:
             raise SystemExit('template must contain the ' + key + ' placeholder exactly once')
     script = load_script(html, backgrounds, sprites, cgs, music)
     html = (html.replace("'__SPRITES__'", json.dumps(sprites)).replace("'__BACKGROUNDS__'", json.dumps(backgrounds))
             .replace("'__CGS__'", json.dumps(cgs)).replace("'__MUSIC__'", json.dumps(music, ensure_ascii=False)).replace("'__SCRIPT__'", json.dumps(script, ensure_ascii=False))
             .replace("'__VERSION__'", json.dumps('версия ' + GAME_VERSION, ensure_ascii=False))
+            .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED))
             .replace("'__LOGO__'", json.dumps(load_logo())))
     with open(os.path.join(SITE, 'sobor-1922.html'), 'w', encoding='utf-8') as f:
         f.write(html)
