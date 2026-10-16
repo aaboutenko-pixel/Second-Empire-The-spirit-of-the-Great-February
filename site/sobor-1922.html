@@ -25,7 +25,7 @@ html{height:100%;box-sizing:border-box}
 *,*::before,*::after{box-sizing:inherit}
 body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 
-.stage{position:relative;width:min(100%, calc((100svh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:size;font-size:3.5cqh;overflow:hidden;background:var(--wall-bot);border-radius:10px;box-shadow:0 0 0 1px var(--line);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.stage{position:relative;width:min(100%, calc((100svh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tg-top,0px) - var(--tg-bottom,0px)) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:size;font-size:3.5cqh;overflow:hidden;background:var(--wall-bot);border-radius:10px;box-shadow:0 0 0 1px var(--line);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .stage:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* the picture: backdrop, illustration, cast and effects. Always 16:9 and its own size container, so whatever is
    inside it is laid out the same whatever the size of the stage around it */
@@ -285,7 +285,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
    dark bands above and below, like any widescreen video. No rotation: the page follows the phone's own orientation. */
 @media (orientation: landscape) and (max-height: 500px){
   body{padding:0;gap:0}
-  .stage{width:min(100%, calc((100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));border-radius:0;box-shadow:none}
+  .stage{width:min(100%, calc((100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tg-top,0px) - var(--tg-bottom,0px)) * 16 / 9));border-radius:0;box-shadow:none}
 }
 @media (orientation: portrait){
   body{padding:0;gap:0}
@@ -800,6 +800,20 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   const TG = (() => { const w = window.Telegram && window.Telegram.WebApp; return w && w.platform && w.platform !== 'unknown' ? w : null; })();
   if (TG) {
     try { TG.ready(); TG.expand(); if (TG.disableVerticalSwipes) TG.disableVerticalSwipes(); } catch (e) { /* older client */ }
+    // Telegram draws its own «Закрыть» and menu over the top of a full-screen app and cannot be told not to; the stage is
+    // kept below that strip (and above the phone's own bottom inset): the body gets that much padding and the stage
+    // shrinks to fit the rest (--tg-top / --tg-bottom in the stage width above). The organizer asked whether the
+    // strip can go: it cannot, it is Telegram's (16.10).
+    const insets = () => {
+      const a = TG.safeAreaInset || {}, c = TG.contentSafeAreaInset || {};
+      const top = (a.top || 0) + (c.top || 0), bottom = a.bottom || 0;
+      document.documentElement.style.setProperty('--tg-top', top + 'px');
+      document.documentElement.style.setProperty('--tg-bottom', bottom + 'px');
+      document.body.style.paddingTop = top + 'px';
+      document.body.style.paddingBottom = bottom + 'px';
+    };
+    insets();
+    if (TG.onEvent) ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged'].forEach((ev) => TG.onEvent(ev, insets));
   }
   function goFull() {
     if (!prefs.fullscreen) return;
