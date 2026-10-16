@@ -1,9 +1,10 @@
-# Выкладка игры на GitHub Pages: при каждом push в main папка site/ (собранная игра) публикуется как сайт.
+# Выкладка игры на GitHub Pages: при каждом push в ветку release папка site/ (собранная игра) публикуется как сайт.
+# В main идёт вся работа, в том числе недоделанные части; игроки видят только то, что слито в release (16.10).
 # Сборка здесь не делается — build.py нужны спрайты и музыка, которые лежат вне репозитория; site/ коммитится готовой.
 name: Pages
 on:
   push:
-    branches: [main]
+    branches: [release]
   workflow_dispatch:
 permissions:
   contents: read
