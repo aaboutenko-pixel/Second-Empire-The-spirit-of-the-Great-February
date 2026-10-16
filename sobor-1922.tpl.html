@@ -2,6 +2,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bad+Script&family=IBM+Plex+Mono:wght@400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Old+Standard+TT:wght@400;700&display=swap">
+<!-- Telegram Mini App (16.10): inside Telegram this gives window.Telegram.WebApp — full screen, swipes, «Выйти»; in a browser it is inert -->
+<script src="https://telegram.org/js/telegram-web-app.js?58"></script>
 <style>
 /* Layout: a 16:9 stage letterboxed in the window — full-bleed backdrop, up to three characters standing in a row, a wide text box along the bottom, choices in the middle. Single dark look on purpose. Horizontal everywhere, as in any visual novel: a phone held upright shows the same stage at full width with dark bands above and below (see the media blocks at the end). */
 :root{
@@ -792,16 +794,25 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   // Full screen (15.10): on by default, asked for on the reader's first click (browsers allow it only in a gesture)
   // and again on «Начать» / «Продолжить»; leaving it (Esc, the button in the settings) is remembered, so the game
   // does not force it back next time. Android also locks the landscape orientation with it.
+  // Inside Telegram (the mini app, 16.10) the page is told it is ready, opened to full height, and vertical swipes are
+  // left to the game (a swipe would otherwise collapse the app); full screen goes through Telegram's own call.
+  // the script defines Telegram.WebApp in any browser too; only inside Telegram its platform is not «unknown»
+  const TG = (() => { const w = window.Telegram && window.Telegram.WebApp; return w && w.platform && w.platform !== 'unknown' ? w : null; })();
+  if (TG) {
+    try { TG.ready(); TG.expand(); if (TG.disableVerticalSwipes) TG.disableVerticalSwipes(); } catch (e) { /* older client */ }
+  }
   function goFull() {
-    if (!document.fullscreenEnabled || document.fullscreenElement || !prefs.fullscreen) return;
+    if (!prefs.fullscreen) return;
+    if (TG && TG.requestFullscreen) { if (!TG.isFullscreen) { try { TG.requestFullscreen(); } catch (e) { /* client too old */ } } return; }
+    if (!document.fullscreenEnabled || document.fullscreenElement) return;
     document.documentElement.requestFullscreen().then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
   }
   document.addEventListener('fullscreenchange', () => { prefs.fullscreen = !!document.fullscreenElement; store.set('prefs', prefs); });
+  if (TG && TG.onEvent) TG.onEvent('fullscreenChanged', () => { prefs.fullscreen = !!TG.isFullscreen; store.set('prefs', prefs); });
   // «Выйти из игры» (15.10): in the Telegram mini app the app closes; in a browser a page cannot close its own tab,
   // so the game leaves full screen and goes to the title. Progress is in the autosave either way.
   function exitGame() {
-    const tg = window.Telegram && window.Telegram.WebApp;
-    if (tg && tg.close) { tg.close(); return; }
+    if (TG && TG.close) { TG.close(); return; }
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     toTitle();
     window.close();
@@ -1344,7 +1355,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
       + '<label class="pref"><span>Громкость музыки</span><input type="range" min="0" max="10" step="1" data-pref="music" value="' + prefs.music + '"></label>'
       + '<label class="pref chk"><input type="checkbox" data-pref="mute"' + (prefs.mute ? ' checked' : '') + '><span>Без музыки</span></label>'
       + '<label class="pref chk"><input type="checkbox" data-pref="skipUnseen"' + (prefs.skipUnseen ? ' checked' : '') + '><span>Пропускать и непрочитанный текст</span></label>'
-      + (document.fullscreenEnabled ? '<button type="button" class="pg" data-act="fullscreen">' + (document.fullscreenElement ? 'Выйти из полного экрана' : 'Полный экран') + '</button>' : '');
+      + ((document.fullscreenEnabled || (TG && TG.requestFullscreen)) ? '<button type="button" class="pg" data-act="fullscreen">' + ((document.fullscreenElement || (TG && TG.isFullscreen)) ? 'Выйти из полного экрана' : 'Полный экран') + '</button>' : '');
   }
   gm.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1356,7 +1367,8 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     }
     const act = e.target.closest('[data-act="fullscreen"]');
     if (act) {
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else { prefs.fullscreen = true; goFull(); }
+      if (TG && TG.requestFullscreen) { if (TG.isFullscreen) { try { TG.exitFullscreen(); } catch (e) {} } else { prefs.fullscreen = true; goFull(); } }
+      else if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else { prefs.fullscreen = true; goFull(); }
       setTimeout(drawGM, 300);
       return;
     }

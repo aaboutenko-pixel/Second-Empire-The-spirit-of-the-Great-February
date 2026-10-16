@@ -19,7 +19,7 @@
 - **Объём:** двадцатые годы, по главам. Глава I «Собор»: ноябрь 1922 – 3 сентября 1923, плюс эпилог «осень 1923».
 - **Игра для игроков (с 16.10): https://aaboutenko-pixel.github.io/Second-Empire-The-spirit-of-the-Great-February/** — GitHub Pages из репозитория пользователя, выкладка каждым push в `main` (§6). Проверено 16.10 в браузере: титул, логотип, музыка, спрайты грузятся.
 - **Запасная страница (артефакт):** https://claude.ai/artifact/TUZp3LhyqCKR1DnSbGRa3X. Это артефакт с доступом «по ссылке», публикуется из `vn-demo/site/sobor-1922.html` вместе с картинками и музыкой (§6). Друзьям пользователь открывает его через меню «Поделиться». Сохранения у каждого свои, в его браузере.
-- **Целевая доставка — мини-приложение Telegram**, пока не делалась. Обсуждали:
+- **Мини-приложение Telegram — подключено в странице 16.10:** `<script src="https://telegram.org/js/telegram-web-app.js">` в шапке; `TG` = `Telegram.WebApp`, только если `platform !== 'unknown'` (в обычном браузере скрипт тоже объявляет объект, но платформа «unknown» — тогда всё как раньше). Внутри Telegram: `ready()`, `expand()`, `disableVerticalSwipes()`; полный экран через `TG.requestFullscreen()` / `exitFullscreen()` (Bot API 8.0, событие `fullscreenChanged` пишет `prefs.fullscreen`), «Выйти» = `TG.close()`. Бот пользователь создаёт сам в @BotFather (инструкция дана 16.10: /newbot → /mybots → Bot Settings → Menu Button → адрес игры); токен мне не нужен. Выкладывать в Telegram пользователь будет после сцены в амбаре; до этого — «бесконечное обновление». Ранее обсуждали:
   - статический хостинг (GitHub Pages; Cloudflare в РФ режут);
   - бот через @BotFather, его создаёт пользователь;
   - сохранения в Telegram CloudStorage.
