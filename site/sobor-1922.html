@@ -25,7 +25,7 @@ html{height:100%;box-sizing:border-box}
 *,*::before,*::after{box-sizing:inherit}
 body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 
-.stage{position:relative;width:min(100%, calc((100svh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tg-top,0px) - var(--tg-bottom,0px)) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:size;font-size:3.5cqh;overflow:hidden;background:var(--wall-bot);border-radius:10px;box-shadow:0 0 0 1px var(--line);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.stage{position:relative;width:min(100%, calc((100svh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:size;font-size:3.5cqh;overflow:hidden;background:var(--wall-bot);border-radius:10px;box-shadow:0 0 0 1px var(--line);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .stage:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* the picture: backdrop, illustration, cast and effects. Always 16:9 and its own size container, so whatever is
    inside it is laid out the same whatever the size of the stage around it */
@@ -82,21 +82,10 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 /* top HUD; the scrim keeps it readable over bright backgrounds */
 .scrim{position:absolute;left:0;right:0;top:0;height:18cqh;background:linear-gradient(var(--veil), transparent);z-index:5;pointer-events:none;transition:opacity .25s}
 .stage.clean .scrim{opacity:0}
-.hud{position:absolute;top:2.4cqh;left:2cqw;right:2cqw;display:flex;align-items:center;gap:1cqw;z-index:6;pointer-events:none}
-.hud > *{pointer-events:auto}
-.where{min-width:0;flex:1;display:flex;align-items:baseline;gap:1.2cqw;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;text-transform:uppercase}
-.where .ch{color:var(--gold);white-space:nowrap}
-.where .pl{color:var(--fg);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chip{font-family:var(--f-mono);font-size:2.1cqh;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;text-decoration:none;white-space:nowrap}
-.chip{padding:.5em 1em;font-variant-numeric:tabular-nums}
-button.chip,select.chip{appearance:none;-webkit-appearance:none;cursor:pointer}
-button.chip:hover,button.chip:focus-visible,select.chip:hover,select.chip:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
-select.chip{max-width:30cqw;text-overflow:ellipsis}
-select.chip option{background:var(--wall-bot);color:var(--fg)}
 /* "look at the background": everything but the scene fades out until the next click */
-.hud,.box,.menu,.layer{transition:opacity .25s}
+.box,.menu,.layer{transition:opacity .25s}
 #cast,.crowd{transition:opacity .25s}
-.stage.clean .hud,.stage.clean .box,.stage.clean .menu,.stage.clean .layer,.stage.clean #cast,.stage.clean .crowd{opacity:0;pointer-events:none}
+.stage.clean .box,.stage.clean .menu,.stage.clean .layer,.stage.clean #cast,.stage.clean .crowd{opacity:0;pointer-events:none}
 .stage.clean .veil{opacity:0}
 
 /* veil for choices and cards */
@@ -141,7 +130,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
    (the card `credits`, scenario.py), so the organizer edits the names himself. */
 .roll{position:absolute;inset:0;z-index:9;background:#000;opacity:0;transition:opacity .7s;pointer-events:none;overflow:hidden;cursor:pointer}
 .stage.roll-on .roll{opacity:1;pointer-events:auto}
-.stage.roll-on .hud,.stage.roll-on .box,.stage.roll-on .qm,.stage.roll-on .layer,.stage.roll-on .menu,.stage.roll-on #cast{opacity:0;pointer-events:none}
+.stage.roll-on .box,.stage.roll-on .qm,.stage.roll-on .layer,.stage.roll-on .menu,.stage.roll-on #cast{opacity:0;pointer-events:none}
 .roll-list{position:absolute;left:0;right:0;top:100%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;align-items:center;gap:4cqh;will-change:transform}
 .cr-title{font-family:var(--f-display);font-size:5.2cqh;letter-spacing:.2em;text-transform:uppercase;color:var(--bone);margin:0 0 4cqh}
 .cr-h{font-family:var(--f-mono);font-size:2.4cqh;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin:5cqh 0 1cqh}
@@ -212,7 +201,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
 .tm-btn:hover::after,.tm-btn:focus-visible::after{width:4cqw}
 .tm-btn:nth-child(1){animation-delay:1.6s}.tm-btn:nth-child(2){animation-delay:1.85s}.tm-btn:nth-child(3){animation-delay:2.1s}.tm-btn:nth-child(4){animation-delay:2.35s}
 @keyframes tm-in{from{opacity:0;transform:translateY(1.5cqh)}to{opacity:1;transform:none}}
-.stage.title .hud,.stage.title .scrim{opacity:0;pointer-events:none}
+.stage.title .scrim{opacity:0;pointer-events:none}
 .stage.title .box{display:none}
 /* the version, in the bottom right corner of the title screen and of the game menu */
 .ver{position:absolute;right:2.2cqw;bottom:2.2cqh;z-index:21;margin:0;font-family:var(--f-mono);font-size:1.9cqh;letter-spacing:.1em;color:var(--muted);opacity:.7;pointer-events:none;display:none}
@@ -244,6 +233,8 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
 .tx.narr{font-style:italic;color:var(--narr)}
 .more{position:absolute;right:calc((100% - var(--col)) / 2);bottom:6.4cqh;color:var(--gold);font-size:2.6cqh;animation:blink 1.1s steps(2) infinite}
 .hint{font-size:2cqh;letter-spacing:.06em;color:var(--muted)}
+.who .pl{margin-left:auto;font-size:1.9cqh;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.stage.decide .who .pl{display:none}
 .row{display:flex;gap:1.2cqw;flex-wrap:wrap;margin-top:auto}
 /* under a fork or an end card the buttons stand centred (one button on the fork, 15.10) */
 .stage.decide .row,.stage.decide .who{justify-content:center}
@@ -270,6 +261,10 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
 .hl b{display:block;font-family:var(--f-mono);font-weight:500;font-size:2cqh;letter-spacing:.14em;text-transform:uppercase;color:var(--c,var(--gold));margin-bottom:.15em}
 .hl.narr{font-style:italic;color:var(--narr)}
 .hl.card{font-family:var(--f-mono);font-size:2.2cqh;color:var(--muted)}
+.scenes{display:flex;flex-wrap:wrap;gap:1.4cqh 1.2cqw;max-width:70cqw}
+.sc{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.3cqh;padding:.45em 1.1em;cursor:pointer;text-align:left}
+.sc:hover,.sc:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
+.sc.on{color:var(--gold);border-color:var(--gold)}
 .pg{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.1cqh;padding:.35em 1em;cursor:pointer}
 .pg:hover,.pg:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .pref{display:grid;grid-template-columns:26cqw 1fr;align-items:center;gap:2cqw;max-width:62cqw;margin:0 0 3cqh;font-size:3cqh}
@@ -277,7 +272,6 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
 .pref.chk{grid-template-columns:auto 1fr;justify-content:start}
 .pref input[type=checkbox]{width:1.1em;height:1.1em;margin:0;accent-color:var(--gold)}
 .toast{position:absolute;left:50%;top:11cqh;transform:translateX(-50%);z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5em 1.3em;font-family:var(--f-mono);font-size:2.1cqh;color:var(--fg);pointer-events:none}
-.stage.gm-open .hud{opacity:0;pointer-events:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* The same layout on every screen, as on a desktop. A phone on its side: no margins round the stage, every pixel
@@ -285,7 +279,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
    dark bands above and below, like any widescreen video. No rotation: the page follows the phone's own orientation. */
 @media (orientation: landscape) and (max-height: 500px){
   body{padding:0;gap:0}
-  .stage{width:min(100%, calc((100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tg-top,0px) - var(--tg-bottom,0px)) * 16 / 9));border-radius:0;box-shadow:none}
+  .stage{width:min(100%, calc((100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));border-radius:0;box-shadow:none}
 }
 @media (orientation: portrait){
   body{padding:0;gap:0}
@@ -313,11 +307,6 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   <div class="roll" id="roll" aria-label="Титры"></div>
 
   <div class="scrim"></div>
-  <div class="hud">
-    <div class="where"><span class="ch" id="chap"></span><span class="pl" id="place"></span></div>
-    <select class="chip" id="jump" aria-label="Перейти к сцене" title="Перейти к сцене"></select>
-  </div>
-
   <div class="layer" id="layer" hidden></div>
   <div class="menu" id="menu" hidden></div>
   <div class="box" id="box"></div>
@@ -325,6 +314,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   <nav class="qm" id="qm" aria-label="Быстрое меню">
     <button type="button" data-q="back">Назад</button>
     <button type="button" data-q="history">История</button>
+    <button type="button" data-q="scenes">Сцены</button>
     <button type="button" data-q="skip">Пропуск</button>
     <button type="button" data-q="auto">Авто</button>
     <button type="button" data-q="hide">Скрыть</button>
@@ -334,6 +324,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   <div class="gm" id="gm" hidden>
     <nav class="gm-nav">
       <button type="button" data-gm="history">История</button>
+      <button type="button" data-gm="scenes">Сцены</button>
       <button type="button" data-gm="prefs">Настройки</button>
       <button type="button" data-gm="title">Главное меню</button>
       <button type="button" data-gm="exit">Выйти из игры</button>
@@ -449,11 +440,9 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   const steps = SCRIPT.steps;
   const $ = (s) => document.getElementById(s);
   const stage = $('stage'), layer = $('layer'), menu = $('menu'), box = $('box'), cast = $('cast');
-  const place = $('place');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const at = (id) => steps.findIndex((s) => s.id === id);
-  $('chap').textContent = SCRIPT.title.name;
   document.title = 'Second Empire · ' + SCRIPT.title.name;
 
   // the crowd in the barn: silhouettes in front of the speaker on the Volhynia backdrop
@@ -461,8 +450,6 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   $('crowd').innerHTML = heads.map(([x, y]) =>
     '<ellipse class="b-crowd" cx="' + x + '" cy="' + y + '" rx="34" ry="40"/><path class="b-crowd" d="M' + (x - 70) + ' 900C' + (x - 66) + ' ' + (y + 70) + ' ' + (x + 66) + ' ' + (y + 70) + ' ' + (x + 70) + ' 900Z"/>').join('');
 
-  // the scene list
-  $('jump').innerHTML = SCRIPT.scenes.map((s) => '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>').join('');
 
   // one actor element per character with a figure, moved between positions
   const actors = {};
@@ -800,23 +787,10 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   const TG = (() => { const w = window.Telegram && window.Telegram.WebApp; return w && w.platform && w.platform !== 'unknown' ? w : null; })();
   if (TG) {
     try { TG.ready(); TG.expand(); if (TG.disableVerticalSwipes) TG.disableVerticalSwipes(); } catch (e) { /* older client */ }
-    // Telegram draws its own «Закрыть» and menu over the top of a full-screen app and cannot be told not to; the stage is
-    // kept below that strip (and above the phone's own bottom inset): the body gets that much padding and the stage
-    // shrinks to fit the rest (--tg-top / --tg-bottom in the stage width above). The organizer asked whether the
-    // strip can go: it cannot, it is Telegram's (16.10).
-    const insets = () => {
-      const a = TG.safeAreaInset || {}, c = TG.contentSafeAreaInset || {};
-      let top = (a.top || 0) + (c.top || 0), bottom = a.bottom || 0;
-      // a client that is full screen but reports no insets (the organizer's phone, 16.10: the clock and «Закрыть» lay
-      // over the HUD and the sprites): the strip is taken as a fifth of the screen, measured on his screenshot
-      if (TG.isFullscreen && top < 8) top = Math.round(innerHeight * 0.2);
-      document.documentElement.style.setProperty('--tg-top', top + 'px');
-      document.documentElement.style.setProperty('--tg-bottom', bottom + 'px');
-      document.body.style.paddingTop = top + 'px';
-      document.body.style.paddingBottom = bottom + 'px';
-    };
-    insets();
-    if (TG.onEvent) ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged'].forEach((ev) => TG.onEvent(ev, insets));
+    // Telegram draws its own «Закрыть» and menu over the top corners of a full-screen app; pushing the stage down
+    // under them (safe-area insets, 16.10) broke the full screen on the organizer's phone and was taken out. Instead
+    // nothing of the game's own sits in the top corners any more: the scene switcher lives in the menu, the place
+    // caption in the text box (17.10).
   }
   function goFull() {
     if (!prefs.fullscreen) return;
@@ -1112,16 +1086,18 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     clearTimeout(resizeTimer); resizeTimer = setTimeout(repage, 120);
   });
 
-  // the switcher shows the section the reader is in: the last scene start at or before the current step
-  function syncJump() {
-    const sel = $('jump');
+  // the scene the reader is in: the last scene start at or before the current step
+  function sceneNow() {
     let value = SCRIPT.scenes[0].id;
     for (const sc of SCRIPT.scenes) { if (at(sc.id) <= cur) value = sc.id; }
-    sel.value = value;
+    return value;
   }
 
+  // where and when, at the right end of the name row (17.10; was the strip at the top of the stage, where Telegram
+  // now draws its own buttons)
+  const placeTag = () => (cur >= 0 && steps[cur].p ? '<span class="pl">' + esc(steps[cur].p) + '</span>' : '');
   function narrBox(hint, text, more) {
-    box.innerHTML = '<div class="who"><span class="hint">' + esc(hint) + '</span></div>'
+    box.innerHTML = '<div class="who"><span class="hint">' + esc(hint) + '</span>' + placeTag() + '</div>'
       + '<p class="tx narr">' + esc(text) + '</p>' + (more ? '<span class="more" id="more">▾</span>' : '');
   }
   function buttonsBox(hint, buttons) {
@@ -1141,7 +1117,6 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   const scriptButtons = (list) => list.map((b, n) => ({ t: b.t, ghost: n > 0, on: () => jumpTo(b.go) }));
 
   function titleScreen() {
-    place.textContent = SCRIPT.title.span;
     setBg(-1);
     setCg(-1);
     setCast(-1, null);
@@ -1197,9 +1172,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     leaveRoll();
     markSeen(cur);
     store.set('auto', snapshot());
-    syncJump();
     music.set(musicOf(cur));
-    place.textContent = s.p;
     if (forward && !mode.skip) playOnce(s);
     forward = false;
     layer.hidden = true; layer.innerHTML = '';
@@ -1220,7 +1193,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
 
     if (s.k === 'say') {
       const c = s.w ? CH[s.w] : null, role = c ? roleOf(cur, s.w) : '';
-      box.innerHTML = '<div class="who">' + (c ? '<span class="nm" style="--c:' + c.c + '">' + esc(c.n) + '</span>' + (role ? '<span class="role">' + esc(role) + '</span>' : '') : '') + '</div>'
+      box.innerHTML = '<div class="who">' + (c ? '<span class="nm" style="--c:' + c.c + '">' + esc(c.n) + '</span>' + (role ? '<span class="role">' + esc(role) + '</span>' : '') : '') + placeTag() + '</div>'
         + '<p class="tx' + (c ? '' : ' narr') + '" id="tx" aria-hidden="true"></p>'
         + '<span class="sr" aria-live="polite">' + esc((c ? c.n + ': ' : '') + s.t) + '</span>'
         + '<span class="more" id="more" hidden>▾</span>';
@@ -1307,9 +1280,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     // the game is played through: the autosave goes, so the title offers only «Начать» (the organizer, 16.10: «Продолжить»
     // after the credits would only lead back into the credits)
     store.drop('auto');
-    syncJump();
     music.set(musicOf(cur));
-    place.textContent = s.p;
     rowN = 0;
     roll.innerHTML = '<ul class="roll-list">' + (s.title ? '<li class="cr-title">' + esc(s.title) + '</li>' : '') + s.rows.map(rowHTML).join('')
       + (LOGO ? '<li class="cr-logo"><img src="' + LOGO + '" alt="Second Empire"></li>' : '') + '</ul>';
@@ -1352,7 +1323,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   function drawGM() {
     gm.querySelectorAll('[data-gm]').forEach((b) => {
       b.classList.toggle('on', b.dataset.gm === gmTab);
-      b.hidden = cur < 0 && b.dataset.gm === 'history';
+      b.hidden = cur < 0 && (b.dataset.gm === 'history' || b.dataset.gm === 'scenes');
     });
     if (gmTab === 'history') {
       const rows = hist.concat([cur]).filter((i) => i >= 0).map((i) => {
@@ -1363,6 +1334,13 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
       }).join('');
       gmBody.innerHTML = '<h2 class="gm-h">История</h2><div class="hist">' + (rows || '<p class="hl narr">Пока пусто.</p>') + '</div>';
       gmBody.scrollTop = gmBody.scrollHeight;
+      return;
+    }
+    if (gmTab === 'scenes') {  // jump straight to a scene instead of clicking through (17.10: was a drop-down at the top)
+      const now = sceneNow();
+      gmBody.innerHTML = '<h2 class="gm-h">Сцены</h2><div class="scenes">'
+        + SCRIPT.scenes.map((sc) => '<button type="button" class="sc' + (sc.id === now ? ' on' : '') + '" data-scene="' + esc(sc.id) + '">' + esc(sc.label) + '</button>').join('') + '</div>';
+      const on = gmBody.querySelector('.sc.on'); if (on) on.scrollIntoView({ block: 'center' });
       return;
     }
     // settings
@@ -1382,6 +1360,8 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
       if (t === 'close') closeGM(); else if (t === 'title') toTitle(); else if (t === 'exit') exitGame(); else { gmTab = t; drawGM(); }
       return;
     }
+    const sc = e.target.closest('[data-scene]');
+    if (sc) { closeGM(); stopAll(); go(at(sc.dataset.scene)); stage.focus(); return; }
     const act = e.target.closest('[data-act="fullscreen"]');
     if (act) {
       if (TG && TG.requestFullscreen) { if (TG.isFullscreen) { try { TG.exitFullscreen(); } catch (e) {} } else { prefs.fullscreen = true; goFull(); } }
@@ -1409,6 +1389,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     const q = b.dataset.q;
     if (q === 'back') back();
     else if (q === 'history') openGM('history');
+    else if (q === 'scenes') openGM('scenes');
     else if (q === 'skip') setSkip(!mode.skip);
     else if (q === 'auto') setAuto(!mode.auto);
     else if (q === 'hide') { stage.classList.add('clean'); clearTimeout(autoTimer); }
@@ -1419,7 +1400,7 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
   // ---------- mouse and keys ----------
   stage.addEventListener('click', (e) => {
     if (stage.classList.contains('clean')) { stage.classList.remove('clean'); if (mode.auto) scheduleAuto(); return; }
-    if (e.target.closest('button, a, select, .hud, .layer, .gm, .qm')) return;
+    if (e.target.closest('button, a, select, .layer, .gm, .qm')) return;
     advance();
   });
   // A click on a card is the card's alone: advancing replaces the card, and the stage's handler below would no longer
@@ -1435,9 +1416,6 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     wheelAt = now;
     if (e.deltaY < 0) back(); else if (e.deltaY > 0) advance();
   }, { passive: true });
-  // scene switcher: jump straight to a scene instead of clicking through
-  const jump = $('jump');
-  jump.addEventListener('change', () => { stopAll(); go(at(jump.value)); stage.focus(); });
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
     if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); return; }
