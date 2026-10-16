@@ -1,0 +1,28 @@
+# Выкладка игры на GitHub Pages: при каждом push в main папка site/ (собранная игра) публикуется как сайт.
+# Сборка здесь не делается — build.py нужны спрайты и музыка, которые лежат вне репозитория; site/ коммитится готовой.
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

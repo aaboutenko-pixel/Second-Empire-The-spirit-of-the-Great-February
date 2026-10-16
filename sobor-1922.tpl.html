@@ -1,0 +1,1438 @@
+<title>Second Empire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bad+Script&family=IBM+Plex+Mono:wght@400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Old+Standard+TT:wght@400;700&display=swap">
+<style>
+/* Layout: a 16:9 stage letterboxed in the window — full-bleed backdrop, up to three characters standing in a row, a wide text box along the bottom, choices in the middle. Single dark look on purpose. Horizontal everywhere, as in any visual novel: a phone held upright shows the same stage at full width with dark bands above and below (see the media blocks at the end). */
+:root{
+  color-scheme: dark;
+  --bg:#070505; --fg:#ece4d6; --muted:#a59a8a; --line:rgba(236,228,214,.16);
+  --gold:#cfa850; --steel:#93b4c8; --brick:#d26d52; --bone:#e6dfcf; --olive:#adc184; --plum:#b9a6d6; --cobalt:#8ea6e6;
+  --sand:#d8b77f; --rose:#dc9fb4; --moss:#93c2a2; --rust:#cf8f62; --sky:#9ec6e8; --wheat:#e3cf8e; --lilac:#c7b3e8; --scarlet:#ea7f86;
+  --panel:rgba(12,8,7,.84); --box:#0d0908; --box-0:rgba(13,9,8,0); --narr:#dcd2c2; --sil:#0d0908; --halo:rgba(233,184,103,.18); --veil:rgba(8,5,4,.6);
+  --wall-bot:#140a09;
+  --newsprint:#cfcabd; --news-ink:#1d1b17; --news-mute:#55514a; --dots:rgba(29,27,23,.10);
+  --letter:#e6ddc6; --letter-ink:#2a2216; --rule:rgba(42,34,22,.13);
+  --stamp:#a52a1f; --form:#c3cccb; --tape:#f0ead9; --shadow:rgba(0,0,0,.55);
+  --f-display:"Old Standard TT", Georgia, "Times New Roman", serif;
+  --f-body:"Literata", Georgia, "Times New Roman", serif;
+  --f-hand:"Bad Script", "Segoe Script", "Literata", cursive;
+  --f-mono:"IBM Plex Mono", "Courier New", monospace;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+
+.stage{position:relative;width:min(100%, calc((100svh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:size;font-size:3.5cqh;overflow:hidden;background:var(--wall-bot);border-radius:10px;box-shadow:0 0 0 1px var(--line);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.stage:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+/* the picture: backdrop, illustration, cast and effects. Always 16:9 and its own size container, so whatever is
+   inside it is laid out the same whatever the size of the stage around it */
+.view{position:absolute;inset:0;container-type:size;overflow:hidden}
+
+/* backdrop: the painted background from backgrounds/ */
+.art{position:absolute;inset:0;width:100%;height:100%;display:block}
+.bgphoto{position:absolute;inset:0;background-size:cover;background-position:center;display:none}
+.bgphoto.on{display:block}
+.crowd{z-index:2;pointer-events:none;filter:blur(3px);opacity:.92}
+.b-crowd{fill:var(--sil)}
+
+/* characters */
+.actor{position:absolute;bottom:0;height:88%;aspect-ratio:.76;left:var(--x,50%);transform:translateX(-50%);transition:left .45s ease, opacity .3s ease, filter .3s ease;color:var(--c,var(--gold));z-index:1}
+.actor.off{opacity:0;pointer-events:none}
+.actor.dim{filter:brightness(.5) saturate(.65)}
+.actor.speak{z-index:2}
+.actor.speak::before{content:"";position:absolute;inset:8% -8% 0;background:radial-gradient(closest-side at 50% 40%, var(--halo), transparent);z-index:-1}
+.actor img{display:block;width:100%;height:100%}
+.actor img{object-fit:contain;object-position:50% 0;filter:saturate(.88) brightness(.95)}
+/* for a portrait whose source cuts the shoulders at the frame edge (look option cutSides): sides and bottom dissolve instead of ending in a hard line */
+.actor.cut-sides img{
+  -webkit-mask-image:linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%), linear-gradient(to top, transparent 0, #000 10%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%), linear-gradient(to top, transparent 0, #000 10%);
+  mask-composite:intersect}
+/* a figure in shadow ("тень"): black, with light from behind along the outline. For people the game does
+   not show, and as a stand-in for characters whose pictures are not drawn yet. */
+.actor.shade img{filter:brightness(0) drop-shadow(0 0 1.2px rgba(255,214,150,.95)) drop-shadow(0 0 9px rgba(255,196,120,.45));opacity:.96}
+.actor.flip img{transform:scaleX(-1)}
+/* full-screen illustration (CG) with a slow drift */
+.cg{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:var(--wall-bot)}
+.cg.on{display:block}
+.cg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:kb 20s ease-in-out infinite alternate}
+.cg span{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);max-width:70cqw;text-align:center;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);opacity:.6}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.07) translate(-1%,-1%)}}
+/* effects: particles over the scene, a white flash, a shake */
+.fx{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
+/* The curtain (15.10): into the game from the title, and between scenes when the place or the date changes, the
+   stage goes black for a moment and the new place and date stand on the black. One element, CSS transitions, and
+   timers that always lift it — the intertitles of 14.10 flickered or stuck black. Nothing between scenes of the
+   same place and date, nothing when skipping or going back. */
+.curtain{position:absolute;inset:0;z-index:15;background:#000;opacity:0;pointer-events:none;transition:opacity .9s ease-in}
+.curtain.on{opacity:1;pointer-events:auto;transition:opacity .45s ease-out}
+.curtain-t{position:absolute;left:8cqw;right:8cqw;top:50%;transform:translateY(-50%);margin:0;text-align:center;font-family:var(--f-display);font-size:4.4cqh;line-height:1.3;letter-spacing:.16em;text-transform:uppercase;color:var(--bone);text-wrap:balance;opacity:0;transition:opacity .5s}
+.curtain-t.show{opacity:1}
+.flash{position:absolute;inset:0;z-index:4;background:#fff8ec;opacity:0;pointer-events:none}
+.flash.go{animation:flash .7s ease-out}
+@keyframes flash{0%{opacity:.95}100%{opacity:0}}
+.stage.shake .bgphoto,.stage.shake .art,.stage.shake .cg,.stage.shake #cast{animation:shake .55s linear}
+@keyframes shake{0%,100%{transform:none}15%{transform:translate(-1.4%,.8%)}30%{transform:translate(1.2%,-1%)}45%{transform:translate(-.9%,-.6%)}60%{transform:translate(.8%,.9%)}75%{transform:translate(-.4%,.3%)}}
+.stage.dim .actor{filter:brightness(.4) saturate(.6)}
+
+/* top HUD; the scrim keeps it readable over bright backgrounds */
+.scrim{position:absolute;left:0;right:0;top:0;height:18cqh;background:linear-gradient(var(--veil), transparent);z-index:5;pointer-events:none;transition:opacity .25s}
+.stage.clean .scrim{opacity:0}
+.hud{position:absolute;top:2.4cqh;left:2cqw;right:2cqw;display:flex;align-items:center;gap:1cqw;z-index:6;pointer-events:none}
+.hud > *{pointer-events:auto}
+.where{min-width:0;flex:1;display:flex;align-items:baseline;gap:1.2cqw;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;text-transform:uppercase}
+.where .ch{color:var(--gold);white-space:nowrap}
+.where .pl{color:var(--fg);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-family:var(--f-mono);font-size:2.1cqh;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;text-decoration:none;white-space:nowrap}
+.chip{padding:.5em 1em;font-variant-numeric:tabular-nums}
+button.chip,select.chip{appearance:none;-webkit-appearance:none;cursor:pointer}
+button.chip:hover,button.chip:focus-visible,select.chip:hover,select.chip:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
+select.chip{max-width:30cqw;text-overflow:ellipsis}
+select.chip option{background:var(--wall-bot);color:var(--fg)}
+/* "look at the background": everything but the scene fades out until the next click */
+.hud,.box,.menu,.layer{transition:opacity .25s}
+#cast,.crowd{transition:opacity .25s}
+.stage.clean .hud,.stage.clean .box,.stage.clean .menu,.stage.clean .layer,.stage.clean #cast,.stage.clean .crowd{opacity:0;pointer-events:none}
+.stage.clean .veil{opacity:0}
+
+/* veil for choices and cards */
+.veil{position:absolute;inset:0;background:var(--veil);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3}
+.stage.dim .veil{opacity:1}
+
+/* cards: newspaper, telegram, letter, archive note */
+.layer{position:absolute;left:0;right:0;top:8cqh;bottom:36cqh;z-index:4;display:grid;place-items:center;padding:0 3cqw;overflow:auto}
+.paper{width:62cqw;background-color:var(--newsprint);background-image:radial-gradient(var(--dots) .7px, transparent .8px);background-size:4px 4px;color:var(--news-ink);padding:2.6cqh 2.6cqw 3cqh;box-shadow:0 18px 40px var(--shadow);transform:rotate(var(--tilt,-1deg));animation:drop .35s ease-out}
+.mast{font-family:var(--f-display);font-weight:700;font-size:calc(var(--k,1) * 4.4cqh);text-align:center;letter-spacing:.08em;padding-bottom:.4em;border-bottom:3px double var(--news-ink)}
+.dl{font-family:var(--f-mono);font-size:calc(var(--k,1) * 1.9cqh);letter-spacing:.05em;color:var(--news-mute);display:flex;justify-content:space-between;gap:8px;margin:.6em 0 1em}
+.hd{font-family:var(--f-display);font-weight:700;font-size:calc(var(--k,1) * 5.4cqh);line-height:1.1;text-transform:uppercase;text-wrap:balance;margin:0 0 .45em}
+.bd{font-size:calc(var(--k,1) * 3.2cqh);line-height:1.45;margin:0}
+.q{font-style:italic;margin:.5em 0 0;font-size:calc(var(--k,1) * 3.2cqh);line-height:1.45}
+.wire{background-color:var(--form);background-image:none}
+.wh{font-family:var(--f-display);font-weight:700;letter-spacing:.32em;text-align:center;color:var(--stamp);font-size:calc(var(--k,1) * 3.8cqh);padding-bottom:.5em;border-bottom:1px solid var(--news-mute)}
+.fld{font-family:var(--f-mono);font-size:calc(var(--k,1) * 2cqh);display:grid;grid-template-columns:auto 1fr;gap:.3em 1em;margin:.8em 0 1em;color:var(--news-mute)}
+.fld b{font-weight:500;color:var(--news-ink)}
+.tape{display:block;width:fit-content;max-width:100%;background:var(--tape);color:var(--news-ink);font-family:var(--f-mono);font-weight:500;font-size:calc(var(--k,1) * 2.7cqh);letter-spacing:.04em;padding:.2em .6em;margin:.45em 0;box-shadow:0 1px 0 var(--dots)}
+.tape:nth-child(even){margin-left:.6em}
+.letter{width:64cqw;background-color:var(--letter);background-image:repeating-linear-gradient(to bottom, transparent 0 calc(1.5em - 1px), var(--rule) calc(1.5em - 1px) 1.5em);color:var(--letter-ink);font-family:var(--f-hand);font-size:calc(var(--k,1) * 3.5cqh);line-height:1.5;padding:2.4cqh 3cqw 2.8cqh;box-shadow:0 18px 40px var(--shadow);transform:rotate(var(--tilt,-.8deg));animation:drop .35s ease-out}
+.letter .lh{margin:0 0 .3em;opacity:.8}
+.letter p{margin:0 0 .25em}
+.letter .sg{margin:.3em 0 0;text-align:right}
+.stamp{display:inline-block;font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--stamp);border:2.5px solid var(--stamp);border-radius:4px;padding:.25em .7em;transform:rotate(-4deg);margin:0 0 .8em;font-size:calc(var(--k,1) * 3.2cqh)}
+/* official documents: laws and decrees */
+.doc{width:72cqw;background-color:var(--letter);background-image:none;color:var(--letter-ink);font-family:var(--f-body)}
+.doc-h{font-family:var(--f-display);font-weight:700;font-size:calc(var(--k,1) * 3.2cqh);line-height:1.2;text-align:center;text-wrap:balance;padding-bottom:.5em;margin-bottom:.6em;border-bottom:3px double var(--letter-ink)}
+.doc-i{margin:0 0 .25em;font-size:calc(var(--k,1) * 2.35cqh);line-height:1.33}
+/* documents and letters are read on a dimmed stage: the card may come down to just above the caption */
+/* a card step: the card takes the stage, the text box shrinks to one caption line under it */
+/* the card stands above the text box (z-index), so the box keeps the same height and shade as under the dialogue
+   (the organizer, 15.10: a lower shade under the cards looked wrong); the caption sits at the bottom of the box */
+.stage.cards .layer{top:9cqh;bottom:14cqh;z-index:6}
+.stage.cards .box{padding-top:0;padding-bottom:6.5cqh;align-content:end}
+.stage.cards .box .who{display:none}
+.stage.cards .box .tx{font-size:2.7cqh}
+/* Credits (16.10, the organizer: «как в фильме... вторые титры: портрет, кто отыгрывал, и оно так вверх идёт плавно»).
+   After the end card the stage goes black and the cast passes upward: each character with a portrait (the face of
+   his sprite, placed as on the stage), his name and caption, and on the right who played him; headings between
+   groups; the logo last. A click or a key skips it; at the end, the title screen. The list is text in the script
+   (the card `credits`, scenario.py), so the organizer edits the names himself. */
+.roll{position:absolute;inset:0;z-index:9;background:#000;opacity:0;transition:opacity .7s;pointer-events:none;overflow:hidden;cursor:pointer}
+.stage.roll-on .roll{opacity:1;pointer-events:auto}
+.stage.roll-on .hud,.stage.roll-on .box,.stage.roll-on .qm,.stage.roll-on .layer,.stage.roll-on .menu,.stage.roll-on #cast{opacity:0;pointer-events:none}
+.roll-list{position:absolute;left:0;right:0;top:100%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;align-items:center;gap:4cqh;will-change:transform}
+.cr-title{font-family:var(--f-display);font-size:5.2cqh;letter-spacing:.2em;text-transform:uppercase;color:var(--bone);margin:0 0 4cqh}
+.cr-h{font-family:var(--f-mono);font-size:2.4cqh;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin:5cqh 0 1cqh}
+.cr-t{font-family:var(--f-display);font-size:4cqh;letter-spacing:.12em;color:var(--narr);text-align:center;max-width:70cqw;margin:10cqh 0 6cqh}
+/* A row is a photograph with a character's text beside it, the photo on the left and on the right in turn (the organizer's
+   sketch, 16.10). Each row is as tall as the stage, so one character is on screen at a time: a photo leaves at the top as
+   the next one comes in from below. The photo: a large print on thick paper with a wide bottom margin, tilted a few
+   degrees, sepia, a soft vignette and grain, the surname written on the margin by hand. Beside it the given name and
+   patronymic, the surname large in the character's colour, the caption, and under them the player, large and gold. */
+.cr{display:flex;align-items:center;gap:5cqw;width:80cqw;height:96cqh}
+.cr.r{flex-direction:row-reverse}
+.cr-txt{flex:1;text-align:center;min-width:0}
+.cr.nopic{height:auto;justify-content:center;gap:3cqw;margin:4cqh 0}
+.ph{margin:0;flex:none;width:40cqh;padding:2cqh 2cqh 0;background:#ece6d6;box-shadow:0 2cqh 5cqh rgba(0,0,0,.8),0 0 0 1px rgba(0,0,0,.5);transform:rotate(var(--tilt,-3deg))}
+.ph-img{position:relative;width:100%;height:44cqh;overflow:hidden;background:#2a211b}
+/* width and height are both set inline from the sprite's own ratio, and no outer rule may cap them: the page published as an
+   artifact sits in a wrapper whose base styles reached the portraits and squashed them (the organizer's screenshot, 16.10) */
+.ph-img img{position:absolute;left:50%;transform:translateX(-50%);max-width:none;max-height:none;object-fit:fill;filter:sepia(.55) contrast(1.06) brightness(.92) saturate(.85)}
+.ph-img.shade img{filter:brightness(0) drop-shadow(0 0 1.2px rgba(255,214,150,.95)) drop-shadow(0 0 9px rgba(255,196,120,.45))}
+.ph-img.flip img{transform:translateX(-50%) scaleX(-1)}
+.ph-img::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 6cqh rgba(35,22,10,.8);background:repeating-radial-gradient(circle at 37% 23%, rgba(255,255,255,.04) 0 1px, transparent 1px 3px),linear-gradient(115deg, rgba(255,250,235,.09), transparent 45%)}
+.ph-sig{font-family:var(--f-hand);font-size:4.6cqh;line-height:1.2;color:#2a2f52;text-align:center;padding:1cqh 0 1.2cqh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-given{display:block;font-family:var(--f-display);font-size:3.4cqh;letter-spacing:.22em;text-transform:uppercase;color:var(--narr);line-height:1.3}
+.cr-nm{display:block;font-family:var(--f-display);font-weight:700;font-size:7cqh;letter-spacing:.1em;text-transform:uppercase;color:var(--c,var(--bone));line-height:1.1;text-wrap:balance;margin-top:.1em}
+.cr-nm.plain{display:inline;font-weight:400;font-size:3cqh;letter-spacing:.06em;text-transform:none;color:var(--narr)}
+.cr-role{display:block;font-family:var(--f-mono);font-size:2.5cqh;letter-spacing:.1em;color:var(--muted);margin-top:1.2cqh}
+.cr-pl{font-family:var(--f-display);font-size:5.4cqh;letter-spacing:.06em;color:var(--gold);white-space:nowrap}
+.cr-txt .cr-pl{display:block;margin-top:5cqh;white-space:normal;text-wrap:balance}
+.cr-txt .cr-pl::before{content:"";display:block;width:12cqh;height:1px;margin:0 auto 3.4cqh;background:var(--gold);opacity:.55}
+.cr-logo{margin:8cqh 0 0}
+.cr-logo img{display:block;width:40cqw;height:auto;filter:drop-shadow(0 .5cqh 1.4cqh rgba(0,0,0,.7))}
+/* Main menu (15.10): the organizer's cabinet backdrop in full, drifting slowly, dust in the air. The logo top left
+   with a soft shadow, the buttons bottom right over the dark folder, the version in the corner.
+   Two soft shadows in those corners keep the type readable; the cap, the order and the tower stay in the light.
+   The scene lives a little (15.10, evening, to match the march on the title): the room comes out of the dark, a
+   burst of light and a gold glint over the logo, the buttons one after another; motes of dust drift and twinkle
+   in the room (the fx kind `motes`, denser and livelier than the scenes' dust), the lamp on the right breathes.
+   Tried and dropped the same evening by the organizer: the camera creeping in, the logo and buttons drifting, the
+   glow pulsing with the music («светится противно»), snow outside the window (not visible once made subtle).
+   The backdrop is shown a touch larger, anchored to the bottom: the red star on the tower's spire (the top 4 % of
+   the picture) stays out of the frame — an empire has no red star; the organizer's file is untouched. */
+.tm{position:absolute;inset:0;z-index:8;display:none}
+.stage.title .tm{display:block}
+.stage.title .bgphoto{background-size:auto 104.5%;background-position:50% 100%}
+/* the first entry waits for a click: browsers allow sound only after a gesture, and the organizer wants the march
+   from the first frame. Returning from the game, the title opens at once. */
+.tm-gate{position:absolute;inset:0;z-index:4;background:#000;display:grid;place-items:center;cursor:pointer}
+.tm-gate span{font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);animation:tm-blink 2.4s ease-in-out infinite}
+@keyframes tm-blink{0%,100%{opacity:.35}50%{opacity:1}}
+.tm-lamp{position:absolute;inset:0;background:radial-gradient(30cqw 48cqh at 96% 28%, rgba(255,205,135,.75), rgba(255,190,110,.25) 45%, rgba(255,200,130,0) 72%);mix-blend-mode:screen;animation:tm-lamp 4.5s ease-in-out infinite alternate}
+@keyframes tm-lamp{from{opacity:.6}to{opacity:1}}
+.tm-vig{position:absolute;inset:0;box-shadow:inset 0 0 16cqw rgba(0,0,0,.9);opacity:.4}
+.tm-fade{position:absolute;inset:0;z-index:3;background:#000;pointer-events:none;animation:tm-fade 1.8s ease-out both}
+@keyframes tm-fade{from{opacity:1}to{opacity:0}}
+.tm-scrim{position:absolute;inset:0;background:radial-gradient(64cqw 58cqh at 0 0, rgba(8,5,4,.72), rgba(8,5,4,0) 100%),radial-gradient(56cqw 62cqh at 100% 100%, rgba(8,5,4,.82), rgba(8,5,4,0) 100%)}
+.tm-h{position:absolute;left:4cqw;top:4cqh;width:42cqw;margin:0;z-index:1;animation:tm-in 1.3s .6s ease-out both}
+.tm-burst{position:absolute;left:-12%;top:-30%;width:124%;height:160%;border-radius:50%;background:radial-gradient(closest-side, rgba(255,240,210,.8), rgba(233,184,103,.3) 45%, rgba(233,184,103,0));pointer-events:none;z-index:-1;animation:tm-burst 1.2s .9s ease-out both}
+@keyframes tm-burst{0%{opacity:0;transform:scale(.4)}35%{opacity:.7}100%{opacity:0;transform:scale(1.5)}}
+.tm-glint{position:absolute;inset:0;background:linear-gradient(105deg, rgba(255,240,200,0) 42%, rgba(255,240,200,.8) 50%, rgba(255,240,200,0) 58%);background-size:300% 100%;-webkit-mask:var(--logo) center/contain no-repeat;mask:var(--logo) center/contain no-repeat;pointer-events:none;animation:tm-glint 9s 1.5s ease-in-out infinite}
+@keyframes tm-glint{0%{background-position:130% 0}13%{background-position:-30% 0}100%{background-position:-30% 0}}
+/* the logo of 15.10 (evening) has gold and silver lettering: a soft dark shadow lifts it off the room, no halo */
+.tm-logo{display:block;width:100%;height:auto;filter:drop-shadow(0 .5cqh 1.4cqh rgba(0,0,0,.7))}
+.tm-name{font-family:var(--f-display);font-weight:700;font-size:11cqh;line-height:1;color:var(--fg);text-shadow:0 2px 8px var(--shadow)}
+.tm-nav{position:absolute;right:6cqw;bottom:11cqh;display:flex;flex-direction:column;align-items:flex-end;gap:1.6cqh}
+.tm-btn{appearance:none;background:none;border:0;padding:.2em 0;font-family:var(--f-display);font-size:5.6cqh;line-height:1.1;letter-spacing:.06em;color:var(--fg);text-shadow:0 1px 4px var(--shadow),0 0 16px var(--shadow);cursor:pointer;display:flex;align-items:center;gap:0;transition:color .2s,gap .3s;animation:tm-in 1s ease-out both}
+.tm-btn::after{content:"";display:block;width:0;height:.09em;background:var(--gold);box-shadow:0 0 8px var(--halo);transition:width .3s}
+.tm-btn:hover,.tm-btn:focus-visible{color:var(--gold);gap:1.4cqw;outline:none}
+.tm-btn:hover::after,.tm-btn:focus-visible::after{width:4cqw}
+.tm-btn:nth-child(1){animation-delay:1.6s}.tm-btn:nth-child(2){animation-delay:1.85s}.tm-btn:nth-child(3){animation-delay:2.1s}.tm-btn:nth-child(4){animation-delay:2.35s}
+@keyframes tm-in{from{opacity:0;transform:translateY(1.5cqh)}to{opacity:1;transform:none}}
+.stage.title .hud,.stage.title .scrim{opacity:0;pointer-events:none}
+.stage.title .box{display:none}
+/* the version, in the bottom right corner of the title screen and of the game menu */
+.ver{position:absolute;right:2.2cqw;bottom:2.2cqh;z-index:21;margin:0;font-family:var(--f-mono);font-size:1.9cqh;letter-spacing:.1em;color:var(--muted);opacity:.7;pointer-events:none;display:none}
+.stage.title .ver,.stage.gm-open .ver{display:block}
+.note-h{font-family:var(--f-display);font-weight:700;font-size:calc(var(--k,1) * 5cqh);line-height:1.15;margin:0 0 .4em;text-wrap:balance}
+
+/* choices in the middle of the screen */
+.menu{position:absolute;left:50%;top:10cqh;bottom:36cqh;transform:translateX(-50%);width:66cqw;z-index:4;display:flex;flex-direction:column;justify-content:center;gap:1.8cqh}
+.opt{appearance:none;text-align:center;font:inherit;font-size:3.7cqh;line-height:1.3;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1.8cqh 2.4cqw;cursor:pointer;transition:border-color .2s, background .2s}
+.opt:hover,.opt:focus-visible{border-color:var(--gold);outline:none}
+.opt.ghost{color:var(--muted)}
+
+/* text box: a shade rising from the bottom edge, solid in its lower part. Sprites are cut at the
+   knees; the cut lines sit inside the solid part, so nothing ends in mid-air. */
+/* Text sits in a centred column of ~60-65 characters; the name and the first line start at the
+   same height on every line, so the eye does not hunt for them when a line is longer or shorter. */
+/* The box holds three lines of speech; a longer line is shown in parts (see paginate). Every size on the stage is a
+   share of its height or width (cqh/cqw), never pixels: the picture is the same on a monitor and on a phone, only
+   smaller — the organizer wants one layout for everyone (15.10). */
+.box{--col:70cqw;position:absolute;left:0;right:0;bottom:0;height:36cqh;z-index:5;background:linear-gradient(to top, var(--box) 0, var(--box) 62%, var(--box-0) 100%);
+  display:grid;grid-template-columns:1fr var(--col) 1fr;align-content:start;row-gap:1cqh;padding-top:9cqh}
+.box > *{grid-column:2;min-width:0}
+.who{display:flex;align-items:baseline;gap:1.4cqw;min-height:1.2em;font-size:2.3cqh;font-family:var(--f-mono);text-shadow:0 1px 3px var(--shadow),0 0 8px var(--shadow)}
+.nm{font-weight:500;font-size:3.3cqh;letter-spacing:.16em;text-transform:uppercase;color:var(--c,var(--gold))}
+.role{font-size:2cqh;color:var(--muted)}
+.tx{font-size:3.5cqh;line-height:1.45;margin:0;text-wrap:pretty;hyphens:auto;-webkit-hyphens:auto;text-shadow:0 1px 3px var(--shadow)}
+/* the part of the line not typed yet: laid out but invisible, so words never jump to the next line while typing */
+.tx .rest{visibility:hidden}
+.tx.narr{font-style:italic;color:var(--narr)}
+.more{position:absolute;right:calc((100% - var(--col)) / 2);bottom:6.4cqh;color:var(--gold);font-size:2.6cqh;animation:blink 1.1s steps(2) infinite}
+.hint{font-size:2cqh;letter-spacing:.06em;color:var(--muted)}
+.row{display:flex;gap:1.2cqw;flex-wrap:wrap;margin-top:auto}
+/* under a fork or an end card the buttons stand centred (one button on the fork, 15.10) */
+.stage.decide .row,.stage.decide .who{justify-content:center}
+.row .opt{font-size:3.2cqh;padding:1.2cqh 2cqw}
+/* quick menu under the text, as in Ren'Py games */
+.qm{position:absolute;left:0;right:0;bottom:.8cqh;z-index:7;display:flex;justify-content:center;flex-wrap:wrap;gap:0 2.4cqw;font-family:var(--f-mono);transition:opacity .25s}
+.qm button{appearance:none;background:none;border:0;padding:.7em .2em;font:inherit;font-size:1.95cqh;letter-spacing:.06em;color:var(--muted);opacity:.85;cursor:pointer}
+.qm button:hover,.qm button:focus-visible{color:var(--fg);opacity:1;outline:none}
+.qm button.on{color:var(--gold);opacity:1}
+.qm button.muted{text-decoration:line-through;opacity:.55}
+.stage.title .qm,.stage.clean .qm{opacity:0;pointer-events:none}
+/* game menu: history, settings, back to the title */
+.gm{position:absolute;inset:0;z-index:20;display:grid;grid-template-columns:24cqw 1fr;background:rgba(8,5,4,.94);color:var(--fg);cursor:default}
+.gm[hidden]{display:none}
+.gm-nav{display:flex;flex-direction:column;justify-content:center;gap:1.4cqh;padding:0 2.6cqw;border-right:1px solid var(--line)}
+.gm-nav button{appearance:none;background:none;border:0;text-align:left;font-family:var(--f-display);font-size:3.8cqh;color:var(--muted);cursor:pointer;padding:.2em 0}
+.gm-nav button:hover,.gm-nav button:focus-visible{color:var(--fg);outline:none}
+.gm-nav button.on{color:var(--gold)}
+.gm-nav button[hidden]{display:none}
+.gm-body{min-width:0;overflow:auto;padding:7cqh 4cqw 5cqh}
+.gm-h{font-family:var(--f-display);font-weight:700;font-size:5.6cqh;margin:0 0 3cqh;color:var(--gold)}
+.hist{display:flex;flex-direction:column;gap:1.8cqh;max-width:62cqw}
+.hl{margin:0;font-size:3cqh;line-height:1.45}
+.hl b{display:block;font-family:var(--f-mono);font-weight:500;font-size:2cqh;letter-spacing:.14em;text-transform:uppercase;color:var(--c,var(--gold));margin-bottom:.15em}
+.hl.narr{font-style:italic;color:var(--narr)}
+.hl.card{font-family:var(--f-mono);font-size:2.2cqh;color:var(--muted)}
+.pg{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.1cqh;padding:.35em 1em;cursor:pointer}
+.pg:hover,.pg:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
+.pref{display:grid;grid-template-columns:26cqw 1fr;align-items:center;gap:2cqw;max-width:62cqw;margin:0 0 3cqh;font-size:3cqh}
+.pref input[type=range]{width:100%;accent-color:var(--gold)}
+.pref.chk{grid-template-columns:auto 1fr;justify-content:start}
+.pref input[type=checkbox]{width:1.1em;height:1.1em;margin:0;accent-color:var(--gold)}
+.toast{position:absolute;left:50%;top:11cqh;transform:translateX(-50%);z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5em 1.3em;font-family:var(--f-mono);font-size:2.1cqh;color:var(--fg);pointer-events:none}
+.stage.gm-open .hud{opacity:0;pointer-events:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* The same layout on every screen, as on a desktop. A phone on its side: no margins round the stage, every pixel
+   goes to the game. A phone held upright: the stage keeps its 16:9 at the full width of the screen, upright, with
+   dark bands above and below, like any widescreen video. No rotation: the page follows the phone's own orientation. */
+@media (orientation: landscape) and (max-height: 500px){
+  body{padding:0;gap:0}
+  .stage{width:min(100%, calc((100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 16 / 9));border-radius:0;box-shadow:none}
+}
+@media (orientation: portrait){
+  body{padding:0;gap:0}
+  .stage{width:100%;border-radius:0;box-shadow:none}
+}
+
+@keyframes drop{from{opacity:0;transform:translateY(-14px) rotate(var(--tilt,-1deg))}to{opacity:1;transform:rotate(var(--tilt,-1deg))}}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.curtain,.curtain-t{transition:none}.paper,.letter,.more,.cg img,.flash.go,.tm-h,.tm-btn,.tm-lamp,.tm-fade,.tm-burst,.tm-glint{animation:none}.stage.shake *{animation:none!important}.actor,.veil{transition:none}}
+</style>
+
+<div class="stage" id="stage" lang="ru" tabindex="0" aria-label="Сцена. Нажмите или пробел, чтобы продолжить">
+  <div class="view" id="view">
+  <div class="bgphoto" id="bgphoto"></div>
+  <div class="cg" id="cg"><img id="cgImg" alt="" hidden><span id="cgPh"></span></div>
+
+  <div id="cast"></div>
+  <!-- the audience in the barn stands in front of the speaker -->
+  <svg class="art crowd" id="crowdLayer" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display:none"><g id="crowd"></g></svg>
+  <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+  </div>
+  <div class="veil"></div>
+  <div class="flash" id="flash"></div>
+  <div class="curtain" id="curtain" aria-live="polite"><p class="curtain-t" id="curtainText"></p></div>
+  <div class="roll" id="roll" aria-label="Титры"></div>
+
+  <div class="scrim"></div>
+  <div class="hud">
+    <div class="where"><span class="ch" id="chap"></span><span class="pl" id="place"></span></div>
+    <select class="chip" id="jump" aria-label="Перейти к сцене" title="Перейти к сцене"></select>
+  </div>
+
+  <div class="layer" id="layer" hidden></div>
+  <div class="menu" id="menu" hidden></div>
+  <div class="box" id="box"></div>
+  <div class="tm" id="tm" hidden></div>
+  <nav class="qm" id="qm" aria-label="Быстрое меню">
+    <button type="button" data-q="back">Назад</button>
+    <button type="button" data-q="history">История</button>
+    <button type="button" data-q="skip">Пропуск</button>
+    <button type="button" data-q="auto">Авто</button>
+    <button type="button" data-q="hide">Скрыть</button>
+    <button type="button" data-q="sound">Звук</button>
+    <button type="button" data-q="prefs">Меню</button>
+  </nav>
+  <div class="gm" id="gm" hidden>
+    <nav class="gm-nav">
+      <button type="button" data-gm="history">История</button>
+      <button type="button" data-gm="prefs">Настройки</button>
+      <button type="button" data-gm="title">Главное меню</button>
+      <button type="button" data-gm="exit">Выйти из игры</button>
+      <button type="button" data-gm="close">Вернуться</button>
+    </nav>
+    <section class="gm-body" id="gmBody"></section>
+  </div>
+  <p class="ver" id="ver"></p>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+(() => {
+  // Pictures are separate files next to the page (img/...), written by build.py; below are their addresses.
+  // Sprites come from sprites/<character>/<set>_<emotion>.png, named by the organizer (the set is usually
+  // the character's own name: kryukov_angry.png), as { character: { set: { ar, pt, emotions: { emotion: url } } } }.
+  // A set is a look below.
+  const SPRITES = '__SPRITES__';
+  // Backgrounds come from backgrounds/<name>.webp|png|jpg, as { name: url }.
+  // A backdrop without a file falls back to a placeholder that names the file it waits for.
+  const BACKGROUNDS = '__BACKGROUNDS__';
+  // Full-screen illustrations: files cg/<name>.webp|png|jpg, as { name: url }; "@cg name" in the script.
+  const CGS = '__CGS__';
+  // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
+  // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
+  const MUSIC = '__MUSIC__';
+  // What the players are told about the build: "версия 1.0" (GAME_VERSION in build.py).
+  const VERSION = '__VERSION__';
+  // The game's logo (logo/logo.png, by the organizer, 15.10): the main menu shows it instead of the chapter name.
+  const LOGO = '__LOGO__';
+  document.getElementById('ver').textContent = VERSION;
+  // The chapter itself: build.py reads scenario/<chapter>/*.txt (format described in scenario.py) into
+  // { title: {name, span}, scenes: [{id, label}], steps: [...] }.
+  const SCRIPT = '__SCRIPT__';
+
+  // Characters. With `looks` the character has drawn sprites: each look is a sprite set (first part of the
+  // file name) with its caption and placement (top edge and height in % of the stage), so heads come out the
+  // same size; measure with tools/measure_faces.py. Everyone on stage has `looks` or a `shade` (below);
+  // `voice: true` speaks without a figure (minor people, voices on the phone).
+  // The caption under the name can change during the chapter with "@role who=…" in the script.
+  const CH = {
+    kryukov: { n: 'Крюков',  c: 'var(--gold)', looks: {
+      kryukov: { r: 'регент', top: 5, h: 106 },
+    } },
+    taburetov: { n: 'Табуретов', c: 'var(--brick)', looks: {
+      taburetov: { r: 'генерал-фельдмаршал', top: 8, h: 89 },  // his set is drawn a little closer to the camera
+    } },
+    ross: { n: 'Росс', c: 'var(--steel)', looks: {
+      ross: { r: 'Северная армия России', top: 6, h: 85 },  // drawn closer to the camera, the head is large in the frame
+    } },
+    lunenko: { n: 'Луненко', c: 'var(--olive)', looks: {  // the first look is the one worn: the insurgent (15.10); the uniform set is kept for a later year
+      lunenko_povstanets: { r: 'подпольщик', top: 8, h: 100 },  // face as the cast's (measure_faces: 134 px), set lower so its centre sits at 28%
+      lunenko: { r: 'подпольщик', top: 5, h: 100 },
+    } },
+    zaryvalov: { n: 'Зарывалов', c: 'var(--cobalt)', looks: {
+      zaryvalov: { r: 'глава ОГПУ', top: 9, h: 86 },  // his set is drawn closer to the camera
+    } },
+    budylski: { n: 'Будыльский', c: 'var(--plum)', looks: {
+      budylski: { r: 'министр иностранных дел', top: 9, h: 86 },  // his set is drawn closer to the camera
+    } },
+    markov: { n: 'Марков', c: 'var(--bone)', looks: {
+      markov: { r: 'генерал', top: 4, h: 111 },  // set by eye on the stage: the skin measure misreads his moustache and goatee
+    } },
+    ruzhik: { n: 'Ружик', c: 'var(--rose)', looks: {
+      ruzhik: { r: 'глава Думы', top: 12, h: 85 },  // drawn closer to the camera
+    } },
+    kashubski: { n: 'Кашубский', c: 'var(--sand)', looks: {
+      kashubski: { r: 'ветеран, депутат', top: 6, h: 109 },
+    } },
+    glug: { n: 'Глюг', c: 'var(--moss)', looks: {
+      glug: { r: 'генерал-фельдмаршал', top: 5, h: 98 },
+    } },
+    pavlov: { n: 'Павлов', c: 'var(--rust)', looks: {
+      pavlov: { r: 'генерал', top: 9, h: 124 },  // drawn farther from the camera
+    } },
+    // second plan: one picture each (sprites/other/<id>.png), worn for every emotion; top/h by tools/measure_faces.py
+    chapaev: { n: 'Ческидов', c: 'var(--scarlet)', looks: {  // the file is chapaev.png on purpose: Chapaev under a false name
+      chapaev: { r: 'генерал-фельдмаршал', top: 12, h: 70 },  // seated, cut at the hips: sized so the cut reaches under the text
+    } },
+    pielsudsky: { n: 'Пилсудский', c: 'var(--rose)', looks: {  // id = the organizer's file name
+      pielsudsky: { r: 'маршал', top: 16, h: 66 },
+    } },
+    antonov_ovseenko: { n: 'Антонов-Овсеенко', c: 'var(--steel)', looks: {  // id = the organizer's file name
+      antonov_ovseenko: { r: 'ОГПУ', top: 9, h: 122 },  // drawn smaller, nearly full length; sized by the eyes (gap as Zaryvalov's): the skin measure took h 140 and he looked bigger (14.10)
+    } },
+    tkachenko: { n: 'Ткаченко', c: 'var(--wheat)', looks: {
+      tkachenko: { r: 'соратник Кашубского', top: 19, h: 63 },  // a bust drawn close to the camera: set lower
+    } },
+    // In shadow ("тень"): `shade` borrows the outline of a drawn set, mirrored, so the figure has a body but no
+    // face. Pick a donor who is never on stage with the character.
+    wrangel:   { n: 'Врангель',  r: 'генерал',             c: 'var(--lilac)', shade: { from: 'kryukov', e: 'unhappy', flip: true } },
+    // voices without a figure
+    crowd:       { n: 'Голоса из толпы', r: '', c: 'var(--muted)', voice: true },
+    peasant:     { n: 'Крестьянин', r: '', c: 'var(--muted)', voice: true },
+    kazak:       { n: 'Казак', r: '', c: 'var(--muted)', voice: true },
+    witness:     { n: 'Очевидец', r: 'село под Картузами', c: 'var(--muted)', voice: true },
+    novak:       { n: 'Новак', r: 'польский русофил', c: 'var(--muted)', voice: true },
+    barthou:     { n: 'Барту', r: 'Французская республика', c: 'var(--sky)', voice: true },
+    chernov:     { n: 'Чернов', r: 'Партия социалистов-революционеров', c: 'var(--muted)', voice: true },
+    spiridonova: { n: 'Спиридонова', r: 'революционерка', c: 'var(--muted)', voice: true },
+    shulgin:     { n: 'Шульгин', r: 'монархист', c: 'var(--muted)', voice: true },
+    colby:       { n: 'Колби', r: 'государственный секретарь США', c: 'var(--sky)', voice: true },
+    kellogg:     { n: 'Келлог', r: 'Соединённые Штаты', c: 'var(--sky)', voice: true },
+    getsberg:    { n: 'Гетсберг', r: 'посол Британской империи', c: 'var(--rose)', voice: true },
+    falcone:     { n: 'Фальконе', r: 'посол Британской империи', c: 'var(--muted)', voice: true },
+    agaryov:     { n: 'Агарёв', r: 'чиновник, Владивосток', c: 'var(--muted)', voice: true },
+    operator:    { n: 'Телефонистка', r: '', c: 'var(--muted)', voice: true },
+    coolidge:    { n: 'Кулидж', r: 'президент США', c: 'var(--sky)', voice: true },
+    grabski:     { n: 'Грабский', r: 'премьер-министр Польши', c: 'var(--muted)', voice: true },
+    doctor:      { n: 'Врач', r: '', c: 'var(--muted)', voice: true },
+  };
+
+  const steps = SCRIPT.steps;
+  const $ = (s) => document.getElementById(s);
+  const stage = $('stage'), layer = $('layer'), menu = $('menu'), box = $('box'), cast = $('cast');
+  const place = $('place');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const at = (id) => steps.findIndex((s) => s.id === id);
+  $('chap').textContent = SCRIPT.title.name;
+  document.title = 'Second Empire · ' + SCRIPT.title.name;
+
+  // the crowd in the barn: silhouettes in front of the speaker on the Volhynia backdrop
+  const heads = [[40, 650], [130, 622], [225, 655], [320, 628], [415, 660], [505, 636], [1160, 640], [1250, 662], [1340, 630], [1430, 655], [1520, 632]];
+  $('crowd').innerHTML = heads.map(([x, y]) =>
+    '<ellipse class="b-crowd" cx="' + x + '" cy="' + y + '" rx="34" ry="40"/><path class="b-crowd" d="M' + (x - 70) + ' 900C' + (x - 66) + ' ' + (y + 70) + ' ' + (x + 66) + ' ' + (y + 70) + ' ' + (x + 70) + ' 900Z"/>').join('');
+
+  // the scene list
+  $('jump').innerHTML = SCRIPT.scenes.map((s) => '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>').join('');
+
+  // one actor element per character with a figure, moved between positions
+  const actors = {};
+  Object.keys(CH).forEach((who) => {
+    const c = CH[who];
+    if (c.voice) return;
+    const el = document.createElement('div');
+    el.className = 'actor off';
+    el.style.setProperty('--c', c.c);
+    el.innerHTML = '<img alt="" hidden>';
+    el.setAttribute('aria-hidden', 'true');
+    el.dataset.who = who;
+    cast.appendChild(el);
+    actors[who] = el;
+  });
+  const SLOTS = { 1: [50], 2: [30, 70], 3: [22, 50, 78] };
+  const BAND_TOP = 80; // % of the stage where the text shade turns solid (.box: 34cqh, solid in its lower 60%)
+
+  // `on`, `bg`, `x`, emotions and captions hold from the step where they were set until changed.
+  function lookBack(i, pick) {
+    for (let j = i; j >= 0; j--) { const v = pick(steps[j]); if (v !== undefined) return v; }
+    return undefined;
+  }
+  const stageOf = (i) => lookBack(i, (s) => s.on) || [];
+  // the title screen stands in the organizer's cabinet (backgrounds/main_menu, 15.10); without that file, the first scene's backdrop
+  const bgOf = (i) => (i < 0 && BACKGROUNDS.main_menu ? 'main_menu' : lookBack(i, (s) => s.bg) || steps[0].bg || 'kremlin_zal');
+  const emoOf = (i, who) => lookBack(i, (s) => (s.e ? s.e[who] : undefined)) || 'original';
+  const lookOf = (i, who) => lookBack(i, (s) => (s.looks ? s.looks[who] : undefined)) || Object.keys(CH[who].looks)[0];
+  const roleOf = (i, who) => {
+    const set = lookBack(i, (s) => (s.role ? s.role[who] : undefined));
+    if (set !== undefined) return set;
+    return CH[who].looks ? (CH[who].looks[lookOf(i, who)] || {}).r || '' : CH[who].r || '';
+  };
+  // The look the script asks for may not be drawn yet: then any look that has files stands in.
+  // the sprite set `look` of a character, or the first set there is when that one has no files
+  function spriteFor(who, look) {
+    const set = SPRITES[who] || {};
+    if (set[look]) return { look, sprite: set[look] };
+    const any = Object.keys(set)[0];
+    return { look: any, sprite: any ? set[any] : null };
+  }
+
+  // Places the characters of step i.
+  function setCast(i, speaker) {
+    const on = cgOf(i) ? [] : stageOf(i), xs = SLOTS[on.length] || [], moved = lookBack(i, (s) => s.x) || {};
+    Object.keys(actors).forEach((who) => {
+      const el = actors[who], pos = on.indexOf(who);
+      if (pos < 0) { el.classList.add('off'); el.classList.remove('speak', 'dim'); return; }
+      dress(el, who, i);
+      el.style.setProperty('--x', (moved[who] !== undefined ? moved[who] : xs[pos]) + '%');
+      el.classList.remove('off');
+      el.classList.toggle('speak', who === speaker);
+      el.classList.toggle('dim', !!speaker && who !== speaker);
+    });
+  }
+  // What a character wears at step i: the sprite set, the emotion shown and where the set is placed.
+  function wearOf(i, who) {
+    const sh = !CH[who].looks && CH[who].shade, src = sh ? sh.from : who;  // a shadow borrows another set's outline
+    const want = sh ? Object.keys(CH[src].looks)[0] : lookOf(i, who), got = spriteFor(src, want);
+    let e = '';
+    if (got.sprite) {
+      const emos = got.sprite.emotions, asked = sh ? sh.e : emoOf(i, who);
+      e = emos[asked] ? asked : (emos.original ? 'original' : Object.keys(emos)[0]);
+    }
+    return { sh, want, got, e, placeAt: CH[src].looks[want] || {} };
+  }
+  function dress(el, who, i) {
+    const { sh, got, e, placeAt } = wearOf(i, who);
+    el.classList.toggle('shade', !!CH[who].shade);
+    el.classList.toggle('flip', !!(sh && sh.flip));
+    const img = el.querySelector('img');
+    if (!got.sprite) {  // the set named in the script has no files at all: the character stands invisible
+      img.hidden = true; el.dataset.k = '';
+      el.classList.remove('cut-sides');
+      el.style.top = el.style.bottom = el.style.height = el.style.aspectRatio = '';
+      return;
+    }
+    if (el.dataset.k !== got.look + '/' + e) { img.src = got.sprite.emotions[e]; el.dataset.k = got.look + '/' + e; }
+    img.hidden = false;
+    el.classList.toggle('cut-sides', !!placeAt.cutSides);
+    // placeAt.top / placeAt.h describe the drawing itself; the built canvas adds headroom (pt) above it.
+    // The drawings are cut at the knees: a sprite must reach below the top of the text band,
+    // otherwise it is lowered until the cut line is hidden behind the band.
+    const pt = got.sprite.pt || 0, full = placeAt.h / (1 - pt);
+    const top = Math.max(placeAt.top, BAND_TOP + 2 - placeAt.h);
+    el.style.top = (top - pt * full) + '%'; el.style.bottom = 'auto';
+    el.style.height = full + '%'; el.style.aspectRatio = String(got.sprite.ar);
+  }
+  const cgOf = (i) => lookBack(i, (s) => s.cg) || '';
+  const fxOf = (i) => lookBack(i, (s) => s.fx) || 'none';
+  // Shows the full-screen illustration of step i, if any (a picture not drawn yet shows its name instead).
+  function setCg(i) {
+    const id = cgOf(i), el = $('cg'), img = $('cgImg');
+    el.classList.toggle('on', !!id);
+    if (!id) return;
+    if (img.dataset.id !== id) {
+      img.dataset.id = id;
+      if (CGS[id]) { img.src = CGS[id]; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
+    }
+    $('cgPh').textContent = CGS[id] ? '' : 'иллюстрация «' + id + '»';
+  }
+  // Particles over the scene. Positions are fractions of the stage, speeds are stage sizes per second.
+  const fx = (() => {
+    const cv = $('fx'), ctx = cv.getContext('2d');
+    let kind = 'none', parts = [], raf = 0, last = 0, W = 1, H = 1, D = 1;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const MAKE = {
+      dust: (init) => ({ x: rnd(0, 1), y: init ? rnd(0, 1) : 1.04, vx: rnd(-0.006, 0.006), vy: rnd(-0.03, -0.008), r: rnd(0.8, 2.2), a: rnd(0.15, 0.5), ph: rnd(0, 6.3) }),
+      // the title's dust: denser, wandering every which way, twinkling as it crosses the light
+      motes: (init) => ({ x: rnd(-0.02, 1.02), y: init ? rnd(0, 1) : rnd(0.9, 1.06), vx: rnd(-0.02, 0.02), vy: rnd(-0.045, -0.01), r: rnd(0.7, 2.6), a: rnd(0.25, 0.7), ph: rnd(0, 6.3), sp: rnd(0.8, 2.2) }),
+      snow: (init) => ({ x: rnd(-0.05, 1.05), y: init ? rnd(0, 1) : -0.03, vx: rnd(-0.01, 0.01), vy: rnd(0.04, 0.11), r: rnd(1, 3.2), a: rnd(0.45, 0.9), ph: rnd(0, 6.3) }),
+      rain: (init) => ({ x: rnd(-0.1, 1.1), y: init ? rnd(0, 1) : rnd(-0.2, -0.02), vx: 0.12, vy: rnd(0.9, 1.4), r: rnd(0.025, 0.05), a: rnd(0.12, 0.3) }),
+      embers: (init) => ({ x: rnd(0.05, 0.95), y: init ? rnd(0.3, 1) : rnd(0.85, 1.05), vx: rnd(-0.02, 0.02), vy: rnd(-0.14, -0.05), r: rnd(0.8, 2.2), life: rnd(2, 5), age: init ? rnd(0, 3) : 0, ph: rnd(0, 6.3) }),
+      smoke: (init) => ({ x: rnd(-0.1, 1.1), y: init ? rnd(0.2, 1.1) : rnd(1.05, 1.25), vx: rnd(0.002, 0.012), vy: rnd(-0.03, -0.012), r: rnd(0.14, 0.3), a: rnd(0.05, 0.11) }),
+    };
+    const COUNT = { dust: 46, motes: 110, snow: 110, rain: 160, embers: 55, smoke: 14 };
+    function resize() {
+      D = Math.min(1.5, window.devicePixelRatio || 1);  // layout size in the stage's own pixels
+      W = cv.width = Math.max(1, Math.round(cv.offsetWidth * D));
+      H = cv.height = Math.max(1, Math.round(cv.offsetHeight * D));
+    }
+    function set(k) {
+      if (reduced) k = 'none';
+      if (k === kind) return;
+      kind = k; parts = [];
+      if (k === 'none') { cancelAnimationFrame(raf); raf = 0; ctx.clearRect(0, 0, W, H); return; }
+      resize();
+      for (let n = 0; n < COUNT[k]; n++) parts.push(MAKE[k](true));
+      if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    }
+    function tick(t) {
+      const dt = Math.min(0.05, (t - last) / 1000), sec = t / 1000;
+      last = t;
+      ctx.clearRect(0, 0, W, H);
+      for (let n = 0; n < parts.length; n++) {
+        const p = parts[n];
+        p.x += (p.vx + (kind === 'snow' ? Math.sin(sec + p.ph) * 0.012 : kind === 'motes' ? Math.sin(sec * p.sp + p.ph) * 0.02 : 0)) * dt;
+        p.y += (p.vy + (kind === 'motes' ? Math.cos(sec * p.sp * 0.7 + p.ph) * 0.012 : 0)) * dt;
+        if (kind === 'embers') p.age += dt;
+        const x = p.x * W, y = p.y * H;
+        if (kind === 'motes') {
+          const tw = Math.max(0, Math.sin(sec * p.sp * 1.7 + p.ph));  // a glint as the mote turns in the light
+          const a = p.a * (0.35 + 0.65 * tw);
+          if (p.r > 1.6) { ctx.fillStyle = 'rgba(255,220,160,' + (a * 0.22) + ')'; ctx.beginPath(); ctx.arc(x, y, p.r * 3 * D, 0, 6.283); ctx.fill(); }
+          ctx.fillStyle = 'rgba(255,236,200,' + a + ')';
+          ctx.beginPath(); ctx.arc(x, y, p.r * D, 0, 6.283); ctx.fill();
+        } else if (kind === 'dust' || kind === 'snow') {
+          const a = kind === 'dust' ? p.a * (0.6 + 0.4 * Math.sin(sec * 1.5 + p.ph)) : p.a;
+          ctx.fillStyle = kind === 'dust' ? 'rgba(255,232,190,' + a + ')' : 'rgba(250,250,255,' + a + ')';
+          ctx.beginPath(); ctx.arc(x, y, p.r * D, 0, 6.283); ctx.fill();
+        } else if (kind === 'rain') {
+          ctx.strokeStyle = 'rgba(180,200,220,' + p.a + ')'; ctx.lineWidth = D;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * p.r * H, y - p.r * H); ctx.stroke();
+        } else if (kind === 'embers') {
+          const a = Math.max(0, 1 - p.age / p.life) * (0.7 + 0.3 * Math.sin(sec * 9 + p.ph));
+          ctx.fillStyle = 'rgba(255,140,50,' + (a * 0.25) + ')'; ctx.beginPath(); ctx.arc(x, y, p.r * 3.2 * D, 0, 6.283); ctx.fill();
+          ctx.fillStyle = 'rgba(255,200,120,' + a + ')'; ctx.beginPath(); ctx.arc(x, y, p.r * D, 0, 6.283); ctx.fill();
+        } else {
+          const g = ctx.createRadialGradient(x, y, 0, x, y, p.r * W);
+          g.addColorStop(0, 'rgba(150,140,130,' + p.a + ')'); g.addColorStop(1, 'rgba(150,140,130,0)');
+          ctx.fillStyle = g; ctx.fillRect(x - p.r * W, y - p.r * W, p.r * W * 2, p.r * W * 2);
+        }
+        if (p.y < -0.35 || p.y > 1.15 || p.x < -0.4 || p.x > 1.4 || (kind === 'embers' && p.age > p.life)) parts[n] = MAKE[kind](false);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    window.addEventListener('resize', () => { if (kind !== 'none') resize(); });
+    return { set };
+  })();
+  // one-off effects of a step, played when the reader arrives at it going forward
+  function playOnce(s) {
+    if (!s.once || reduced) return;
+    if (s.once.includes('flash')) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+    if (s.once.includes('shake')) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 600); }
+  }
+
+  // The pictures are separate files: the ones the next steps need are fetched ahead of the reader, nearest
+  // first, so a new emotion or backdrop does not appear with a blink. Loaded pictures stay in the browser cache.
+  const warm = (() => {
+    const AHEAD = 60, PARALLEL = 4;
+    const asked = new Set(), stepsDone = new Set(), keep = [];
+    let queue = [], busy = 0;
+    function pump() {
+      while (busy < PARALLEL && queue.length) {
+        const url = queue.shift(), im = new Image();
+        busy++;
+        im.onload = im.onerror = () => { busy--; pump(); };
+        im.src = url;
+        keep.push(im);
+      }
+    }
+    function urlsOf(i) {
+      const urls = [BACKGROUNDS[bgOf(i)], CGS[cgOf(i)]];
+      stageOf(i).forEach((who) => {
+        if (!CH[who] || !(CH[who].looks || CH[who].shade)) return;
+        const w = wearOf(i, who);
+        if (w.got.sprite) urls.push(w.got.sprite.emotions[w.e]);
+      });
+      if (steps[i].k === 'credits') steps[i].rows.forEach((r) => { const p = r.l && portraitOf(r.l); if (p) urls.push(p.src); });
+      return urls.filter(Boolean);
+    }
+    return (from) => {
+      const fresh = [];
+      for (let i = Math.max(0, from); i < Math.min(steps.length, from + AHEAD); i++) {
+        if (stepsDone.has(i)) continue;
+        stepsDone.add(i);
+        urlsOf(i).forEach((u) => { if (!asked.has(u)) { asked.add(u); fresh.push(u); } });
+      }
+      queue = fresh.concat(queue);
+      pump();
+    };
+  })();
+
+  // ---------- music ----------
+  // "@music name" plays a track from that line on, until the next "@music" ("@music" alone is silence); it holds across
+  // scenes. Each time a track comes on it starts from its beginning. It loops without a seam: shortly before the music
+  // ends (build.py finds where, leaving out the silent tail) the same track starts again on the second player and the two
+  // cross-fade. A browser lets a page make sound only after the reader has clicked or pressed a key, so the music starts
+  // with the first touch. Volume is in the settings, mute in the quick menu (M). iPhones ignore volume set by a page:
+  // there a change of track is a cut and a loop jumps from the end of the music straight to its beginning.
+  const musicOf = (i) => (i < 0 ? SCRIPT.title.music || '' : lookBack(i, (s) => s.music) || '');
+  const music = (() => {
+    const decks = [new Audio(), new Audio()];
+    decks.forEach((a) => { a.preload = 'auto'; a.hidden = true; document.body.appendChild(a); });  // in the DOM for tests
+    const probe = new Audio();
+    probe.volume = 0.5;
+    const canFade = Math.abs(probe.volume - 0.5) < 0.01;
+    const SWITCH = 1.2, LOOP = 3;  // seconds of cross-fade: a new track, a loop
+    let live = 0, want = '', playing = '', unlocked = false, timer = 0, speed = 1;
+    const target = () => (prefs.mute ? 0 : Math.pow(prefs.music / 10, 1.6));
+    const info = (name) => MUSIC[name] || {};
+    function step() {
+      let busy = false;
+      decks.forEach((a, n) => {
+        const goal = n === live && playing ? target() : 0;
+        if (!canFade) { if (goal === 0 && !a.paused) a.pause(); return; }
+        const v = a.volume < goal ? Math.min(goal, a.volume + speed * 0.04) : Math.max(goal, a.volume - speed * 0.04);
+        a.volume = v;
+        if (goal === 0 && v === 0) { if (!a.paused) a.pause(); }
+        else if (v !== goal) busy = true;
+      });
+      if (!busy) { clearInterval(timer); timer = 0; }
+    }
+    // the fade covers the longer way: up to the target, or down from where a player is now. Measured from the target
+    // alone, muting (target 0) crawled at the floor speed and took ten seconds (15.10).
+    function fade(seconds) {
+      speed = Math.max(0.05, target(), ...decks.map((a) => a.volume)) / seconds;
+      step();
+      if (!timer) timer = setInterval(step, 40);
+    }
+    // the live player starts `name` from the beginning of its music
+    function start(name) {
+      const a = decks[live], from = info(name).s || 0;
+      if (a.dataset.track !== name) { a.src = info(name).u; a.dataset.track = name; }
+      const seek = () => { try { a.currentTime = from; } catch (e) { /* not seekable yet */ } };
+      if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
+      a.volume = canFade ? 0 : 1;
+      if (target() > 0) a.play().catch(() => {});
+    }
+    function sync() {
+      if (!unlocked || document.hidden) return;
+      if (want !== playing) {
+        live = 1 - live;
+        playing = want;
+        if (want) start(want);
+      } else if (playing && target() > 0 && decks[live].paused) decks[live].play().catch(() => {});
+      stage.dataset.music = playing;  // for tests: the track that should be playing, and its player
+      stage.dataset.deck = live;
+      fade(SWITCH);
+    }
+    function loop() {
+      live = 1 - live;
+      stage.dataset.deck = live;
+      start(playing);
+      fade(LOOP);
+    }
+    setInterval(() => {
+      const a = decks[live], end = info(playing).e;
+      if (unlocked && playing && end && !a.paused && a.currentTime >= end - (canFade ? LOOP : 0.05)) loop();
+    }, 100);
+    decks.forEach((a) => a.addEventListener('ended', () => { if (a === decks[live] && playing) loop(); }));
+    const unlock = () => { if (!unlocked) { unlocked = true; sync(); } };
+    document.addEventListener('pointerdown', unlock, true);
+    document.addEventListener('keydown', unlock, true);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) decks.forEach((a) => a.pause()); else sync();
+    });
+    return {
+      set(name) { want = MUSIC[name] ? name : ''; sync(); },
+      sync,
+      unlocked: () => unlocked,
+    };
+  })();
+  function setMute(on) {
+    prefs.mute = on;
+    store.set('prefs', prefs);
+    $('qm').querySelector('[data-q="sound"]').classList.toggle('muted', on);
+    music.sync();
+    toast(on ? 'Музыка выключена' : 'Музыка включена');
+  }
+
+  // Shows the backdrop of step i (a missing file leaves the dark stage wall; build.py reports it).
+  function setBg(i) {
+    const bg = bgOf(i), photo = BACKGROUNDS[bg], el = $('bgphoto');
+    if (el.dataset.bg !== bg) {
+      el.style.backgroundImage = photo ? 'url("' + photo + '")' : '';
+      el.dataset.bg = bg;
+    }
+    el.classList.toggle('on', !!photo);
+    $('crowdLayer').style.display = bg === 'volhynia_ambar' ? '' : 'none';
+  }
+
+  // ---------- what the reader keeps: autosave, read lines, preferences (this browser only) ----------
+  // The storage key is fixed: the chapter was «Глава I · Собор» until 16.10 and is «Пролог · Собор» since, and the
+  // readers' autosave must survive the renaming. Whatever is still under the old name is carried over once.
+  const KEY = 'vn:sobor:';
+  try {
+    const OLD = 'vn:Глава I · Собор:';
+    for (const k of ['auto', 'seen', 'prefs']) {
+      if (localStorage.getItem(KEY + k) === null && localStorage.getItem(OLD + k) !== null) localStorage.setItem(KEY + k, localStorage.getItem(OLD + k));
+    }
+  } catch (e) { /* no storage: nothing to carry */ }
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(KEY + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* private window: nothing is kept */ } },
+    drop(k) { try { localStorage.removeItem(KEY + k); } catch (e) { /* nothing to drop */ } },
+  };
+  const prefs = Object.assign({ speed: 6, auto: 5, skipUnseen: false, music: 6, mute: false, fullscreen: true }, store.get('prefs', {}));
+  // Full screen (15.10): on by default, asked for on the reader's first click (browsers allow it only in a gesture)
+  // and again on «Начать» / «Продолжить»; leaving it (Esc, the button in the settings) is remembered, so the game
+  // does not force it back next time. Android also locks the landscape orientation with it.
+  function goFull() {
+    if (!document.fullscreenEnabled || document.fullscreenElement || !prefs.fullscreen) return;
+    document.documentElement.requestFullscreen().then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
+  }
+  document.addEventListener('fullscreenchange', () => { prefs.fullscreen = !!document.fullscreenElement; store.set('prefs', prefs); });
+  // «Выйти из игры» (15.10): in the Telegram mini app the app closes; in a browser a page cannot close its own tab,
+  // so the game leaves full screen and goes to the title. Progress is in the autosave either way.
+  function exitGame() {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.close) { tg.close(); return; }
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    toTitle();
+    window.close();
+  }
+  const CPS = [10, 15, 20, 30, 40, 50, 65, 85, 120, Infinity]; // characters per second for the speed setting 1..10
+  const seen = new Set(store.get('seen', []));
+  let seenTimer = null;
+  function markSeen(i) {
+    if (seen.has(steps[i].h)) return;
+    seen.add(steps[i].h);
+    if (!seenTimer) seenTimer = setTimeout(() => { seenTimer = null; store.set('seen', [...seen]); }, 1200);
+  }
+
+  const sceneOf = (i) => { let label = SCRIPT.scenes[0].label; for (const sc of SCRIPT.scenes) { if (at(sc.id) <= i) label = sc.label; } return label; };
+  function lineText(s) {
+    if (s.k === 'say') return (s.w ? CH[s.w].n + ': ' : '') + s.t;
+    if (s.k === 'paper') return (s.mast || 'Ведомости России') + ': ' + s.hd;
+    if (s.k === 'wire') return 'Телеграмма. ' + s.from + ' — ' + s.to;
+    if (s.k === 'letter') return 'Письмо. ' + s.head;
+    if (s.k === 'doc') return s.title;
+    if (s.k === 'choice') return s.ask;
+    if (s.k === 'credits') return 'Титры';
+    return s.title || s.stamp || '';
+  }
+  // The autosave (every step; «Продолжить» on the title screen) remembers the step and also the line itself: when the
+  // script has been rewritten since, the same line is found again (the way back is then lost).
+  function snapshot() {
+    return { cur, hist: hist.slice(-300), h: steps[cur].h, ver: SCRIPT.ver, date: Date.now(), bg: bgOf(cur), scene: sceneOf(cur), line: lineText(steps[cur]) };
+  }
+  function restore(snap) {
+    stopAll();
+    if (snap.ver === SCRIPT.ver && snap.cur < steps.length) { cur = snap.cur; hist = snap.hist || []; } else {
+      let best = -1;
+      steps.forEach((s, i) => { if (s.h === snap.h && (best < 0 || Math.abs(i - snap.cur) < Math.abs(best - snap.cur))) best = i; });
+      cur = best >= 0 ? best : Math.min(snap.cur, steps.length - 1);
+      hist = [];
+    }
+    closeGM();
+    render();
+  }
+
+  // ---------- playing ----------
+  let cur = -1, hist = [], timer = null, full = '';
+  const mode = { skip: false, auto: false, ctrl: false };
+  let autoTimer = null, skipTimer = null;
+  const passable = (s) => s.k === 'say' || !!CARD_HINT[s.k];
+
+  let forward = false;  // the step on screen was reached going forward (one-off effects play only then)
+  function goNow(i) { stopType(); clearTimeout(autoTimer); clearTimeout(skipTimer); hist.push(cur); cur = i; forward = true; render(); }
+  // Stepping forward into a scene that opens somewhere else, or at another time, goes through the curtain with the
+  // new place and date on it; the rest (within a scene, same place and date, a jump, skipping) is immediate.
+  const sceneStart = new Set(SCRIPT.scenes.map((sc) => at(sc.id)));
+  function go(i) {
+    if (cur >= 0 && i === cur + 1 && !mode.skip && sceneStart.has(i) && steps[i].p !== steps[cur].p) { withCurtain(steps[i].p, () => goNow(i)); return; }
+    // the credits follow the last line through the curtain with the card's title («Конец пролога») on it; the roll begins under it (16.10, no end card)
+    if (cur >= 0 && i === cur + 1 && steps[i] && steps[i].k === 'credits') { setSkip(false); withCurtain(steps[i].end || '', () => goNow(i)); return; }
+    goNow(i);
+  }
+  const curtain = $('curtain'), curtainText = $('curtainText');
+  let curtainTimer = 0;
+  const caption = (t) => (t || '').replace(/, /g, ' · ');
+  function withCurtain(text, apply) {
+    clearTimeout(curtainTimer);
+    curtainText.classList.remove('show');
+    curtainText.textContent = caption(text);
+    curtain.classList.add('on');
+    curtainTimer = setTimeout(() => {
+      apply();
+      if (text) curtainText.classList.add('show');
+      curtainTimer = setTimeout(() => {  // the caption goes first, the curtain lifts after it
+        curtainText.classList.remove('show');
+        curtainTimer = setTimeout(() => curtain.classList.remove('on'), text ? 420 : 0);
+      }, text ? 1700 : 200);
+    }, 480);
+  }
+  let atEnd = false;
+  function back() {
+    if (!gm.hidden) return;
+    if (cur >= 0 && steps[cur].k === 'say' && pg > 0) { setSkip(false); stopType(); clearTimeout(autoTimer); pg--; showPage(); return; }
+    if (!hist.length) return;
+    setSkip(false); stopType(); clearTimeout(autoTimer); cur = hist.pop(); atEnd = true; render();
+  }
+  function toTitle() { stopAll(); hist = []; cur = -1; closeGM(); render(); }
+  function jumpTo(target) {
+    if (target === 'restart') { stopAll(); hist = []; cur = 0; render(); }
+    else if (target === 'title') toTitle();
+    else if (target === 'next') go(cur + 1);
+    else go(at(target));
+  }
+  function stopAll() { stopType(); clearTimeout(autoTimer); setSkip(false); }
+
+  function stopType() { if (timer) { clearInterval(timer); timer = null; } }
+  function typeInto(el, text) {
+    full = text;
+    const cps = CPS[prefs.speed - 1];
+    if (reduced || !isFinite(cps) || mode.skip) { el.textContent = text; shown(); return; }
+    const t0 = performance.now();
+    el.innerHTML = '<span></span><span class="rest"></span>';
+    const typed = el.firstChild, rest = el.lastChild;
+    rest.textContent = text;
+    timer = setInterval(() => {
+      const n = Math.min(text.length, Math.floor((performance.now() - t0) / 1000 * cps));
+      typed.textContent = text.slice(0, n);
+      rest.textContent = text.slice(n);
+      if (n >= text.length) { stopType(); el.textContent = text; shown(); }
+    }, 16);
+  }
+  function finishType() {
+    stopType();
+    const el = $('tx'); if (el) el.textContent = full;
+    shown();
+  }
+  // the whole line is on screen: show the arrow, let auto or skip move on
+  function shown() {
+    const more = $('more'); if (more) more.hidden = false;
+    if (mode.skip) scheduleSkip(); else if (mode.auto) scheduleAuto();
+  }
+  function scheduleAuto() {
+    clearTimeout(autoTimer);
+    const s = steps[cur];
+    if (!s || !passable(s)) return;
+    const len = s.k === 'say' ? pages[pg].length : lineText(s).length + 160;
+    autoTimer = setTimeout(() => {
+      if (mode.auto && gm.hidden && !timer && !stage.classList.contains('clean') && !nextPage()) go(cur + 1);
+    }, (0.3 + len * 0.006) * prefs.auto * 1000);
+  }
+  // Skipping goes through text already read; unread text stops it unless the settings allow otherwise.
+  function scheduleSkip() {
+    clearTimeout(skipTimer);
+    skipTimer = setTimeout(() => {
+      if (!mode.skip || !gm.hidden) return;
+      if (nextPage()) return;
+      const s = steps[cur], next = steps[cur + 1];
+      if (!passable(s) || !next) { setSkip(false); return; }
+      if (!prefs.skipUnseen && !seen.has(next.h)) { setSkip(false); toast('Дальше непрочитанный текст'); return; }
+      go(cur + 1);
+    }, 40);
+  }
+  function setSkip(on) {
+    mode.skip = on;
+    if (!on) { mode.ctrl = false; clearTimeout(skipTimer); }
+    $('qm').querySelector('[data-q="skip"]').classList.toggle('on', on);
+    if (on) { if (timer) finishType(); else scheduleSkip(); }
+  }
+  function setAuto(on) {
+    mode.auto = on;
+    $('qm').querySelector('[data-q="auto"]').classList.toggle('on', on);
+    clearTimeout(autoTimer);
+    if (on && !timer && cur >= 0) scheduleAuto();
+  }
+
+  let toastTimer = null;
+  function toast(text) {
+    const el = $('toast');
+    el.textContent = text; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
+  }
+
+  // a card tilts left or right by the parity of its position, so a run of cards looks like a pile
+  const tilt = (i, a, b) => (i % 2 ? a : b) + 'deg';
+  function cardHTML(s, i) {
+    if (s.k === 'wire') {
+      return '<article class="paper wire" style="--tilt:' + tilt(i, 0.8, -1.1) + '">'
+        + '<div class="wh">ТЕЛЕГРАММА</div>'
+        + '<div class="fld"><span>Кому</span><b>' + esc(s.to) + '</b></div>'
+        + s.tape.map((t) => '<span class="tape">' + esc(t) + '</span>').join('')
+        + '<span class="tape">' + esc(s.from.toUpperCase()) + '</span>'
+        + '</article>';
+    }
+    if (s.k === 'letter') {
+      return '<article class="letter" style="--tilt:' + tilt(i, 0.7, -0.8) + '">'
+        + '<p class="lh">' + esc(s.head) + '</p>'
+        + s.body.map((p) => '<p>' + esc(p) + '</p>').join('')
+        + '<p class="sg">' + esc(s.sign) + '</p></article>';
+    }
+    if (s.k === 'doc') {
+      return '<article class="paper doc" style="--tilt:' + tilt(i, 0.4, -0.4) + '">'
+        + '<div class="doc-h">' + esc(s.title) + '</div>'
+        + s.items.map((p) => '<p class="doc-i">' + esc(p) + '</p>').join('')
+        + '</article>';
+    }
+    const mast = s.mast || 'Ведомости России';
+    return '<article class="paper" style="--tilt:' + tilt(i, 0.8, -1.1) + '">'
+      + '<div class="mast">' + esc(mast.toUpperCase()) + '</div>'
+      + '<div class="dl"><span>' + esc(s.date) + '</span><span>' + (/Ведомости/.test(mast) ? 'Цена 5 коп.' : '') + '</span></div>'
+      + '<h2 class="hd">' + esc(s.hd) + '</h2>'
+      + s.bd.map((p) => '<p class="bd">' + esc(p) + '</p>').join('')
+      + s.q.map((p) => '<p class="q">' + esc(p) + '</p>').join('')
+      + '</article>';
+  }
+  const CARD_HINT = { paper: (s) => s.mast || 'Ведомости России', wire: () => 'Телеграмма', letter: () => 'Письмо', doc: () => 'Документ' };
+
+  // A long card shrinks its type until it fits the space it has: no scrolling, nothing cut off.
+  // Measured by the card's own height: its tilt and its drop-in animation swell the layer's scroll height by a few
+  // px (the end card showed a scroll bar for 3 px, 14.10), so 1.5% of the layer is kept free for the tilted corners.
+  function fitCard() {
+    const art = layer.firstElementChild;
+    if (!art || !layer.clientHeight) return;
+    const room = layer.clientHeight * 0.985;
+    let k = 1;
+    art.style.setProperty('--k', '1');
+    while (art.offsetHeight > room && k > 0.6) { k -= 0.04; art.style.setProperty('--k', k.toFixed(2)); }
+  }
+  // the web fonts may arrive after a card was fitted with the fallback ones
+  if (document.fonts) document.fonts.ready.then(() => { if (!layer.hidden) fitCard(); });
+  // A line longer than the box holds is shown in parts, as in Ren'Py games: each part fills the box, a click
+  // shows the next. Parts end at sentence ends; a sentence too long for the box is cut after a comma or before
+  // a dash, failing that between words. The type size never changes. History and saves keep the whole line.
+  const CUTS = [/(?<=[.!?…][»"')]*)\s+/, /(?<=[,;:])\s+|\s+(?=—)/, /\s+/];
+  // How far down the stage an element sits, in the stage's own pixels (offsets, not screen rectangles).
+  const stageY = (el) => { let y = 0; for (let e = el; e && e !== stage; e = e.offsetParent) y += e.offsetTop; return y; };
+  function paginate(el, text) {
+    const full = stageY($('qm')) - 2;
+    let limit = full;
+    const fits = (t) => { el.textContent = t; return stageY(el) + el.offsetHeight <= limit; };
+    if (fits(text)) return [text];
+    // a window too small for even one word (a hidden tab, a collapsed pane): leave the line whole, repage() cuts it
+    // when the window gets its size
+    if (!fits(text.split(/\s+/)[0])) return [text];
+    // pieces small enough to fit on their own, cut as coarsely as possible
+    const pieces = (t, level) => {
+      if (level >= CUTS.length || fits(t)) return [t];
+      const parts = t.split(CUTS[level]).filter(Boolean);
+      return parts.length > 1 ? parts.flatMap((x) => pieces(x, level + 1)) : pieces(t, level + 1);
+    };
+    const cut = pieces(text, 0);
+    const fill = () => {
+      const pages = [];
+      let page = '';
+      for (const piece of cut) {
+        const joined = page ? page + ' ' + piece : piece;
+        if (!page || fits(joined)) page = joined;
+        else { pages.push(page); page = piece; }
+      }
+      pages.push(page);
+      return pages;
+    };
+    // Filled greedily, the last part may be a few words. So the box is made as short as it can be while the
+    // line still takes the same number of parts: the parts come out about even.
+    let best = fill();
+    const top = stageY(el);
+    let lo = top, hi = full;
+    while (hi - lo > 2) {
+      limit = (lo + hi) / 2;
+      const p = fill();
+      if (p.length === best.length && p.every((x) => fits(x))) { best = p; hi = limit; } else lo = limit;
+    }
+    limit = full;
+    return best;
+  }
+  let pages = [''], pg = 0;
+  // Shows part pg of the current line, typed.
+  function showPage() {
+    const more = $('more'); if (more) more.hidden = true;
+    typeInto($('tx'), pages[pg]);
+  }
+  // Moves to the next part of the current line; false when the line has no more parts.
+  function nextPage() {
+    if (cur < 0 || steps[cur].k !== 'say' || pg >= pages.length - 1) return false;
+    stopType(); clearTimeout(autoTimer); clearTimeout(skipTimer);
+    pg++; showPage();
+    return true;
+  }
+  // After a resize the parts are cut again for the new box; the reader stays at the same place in the line.
+  function repage() {
+    if (cur < 0 || steps[cur].k !== 'say' || !$('tx')) return;
+    const at = pages.slice(0, pg).join(' ').length + (pg ? 1 : 0);
+    stopType();
+    pages = paginate($('tx'), steps[cur].t);
+    let start = 0;
+    pg = 0;
+    while (pg < pages.length - 1 && start + pages[pg].length < at) { start += pages[pg].length + 1; pg++; }
+    $('tx').textContent = pages[pg];
+    shown();
+  }
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!layer.hidden) fitCard();
+    clearTimeout(resizeTimer); resizeTimer = setTimeout(repage, 120);
+  });
+
+  // the switcher shows the section the reader is in: the last scene start at or before the current step
+  function syncJump() {
+    const sel = $('jump');
+    let value = SCRIPT.scenes[0].id;
+    for (const sc of SCRIPT.scenes) { if (at(sc.id) <= cur) value = sc.id; }
+    sel.value = value;
+  }
+
+  function narrBox(hint, text, more) {
+    box.innerHTML = '<div class="who"><span class="hint">' + esc(hint) + '</span></div>'
+      + '<p class="tx narr">' + esc(text) + '</p>' + (more ? '<span class="more" id="more">▾</span>' : '');
+  }
+  function buttonsBox(hint, buttons) {
+    box.innerHTML = '<div class="who"><span class="hint">' + esc(hint) + '</span></div><div class="row">'
+      + buttons.map((b, n) => '<button class="opt' + (b.ghost ? ' ghost' : '') + '" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</div>';
+    box.querySelectorAll('.opt').forEach((el) => el.addEventListener('click', buttons[+el.dataset.n].on));
+  }
+  function noteCard(head, title, paras, note) {
+    layer.innerHTML = '<article class="paper" style="--tilt:0.7deg">' + head
+      + (title ? '<h2 class="note-h">' + esc(title) + '</h2>' : '')
+      + paras.map((p) => '<p class="bd">' + esc(p) + '</p>').join('')
+      + (note ? '<p class="q">' + esc(note) + '</p>' : '')
+      + '</article>';
+    layer.hidden = false;
+    fitCard();
+  }
+  const scriptButtons = (list) => list.map((b, n) => ({ t: b.t, ghost: n > 0, on: () => jumpTo(b.go) }));
+
+  function titleScreen() {
+    place.textContent = SCRIPT.title.span;
+    setBg(-1);
+    setCg(-1);
+    setCast(-1, null);
+    fx.set('motes');
+    music.set(musicOf(-1));
+    stage.classList.add('title');
+    stage.classList.remove('dim', 'cards', 'decide');
+    menu.hidden = true; menu.innerHTML = '';
+    layer.hidden = true; layer.innerHTML = '';
+    box.innerHTML = '';
+    const last = store.get('auto', null);
+    if (last && last.cur < steps.length) warm(last.cur);
+    warm(0);
+    const items = (last ? [{ t: 'Продолжить', on: () => { goFull(); withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last)); } }] : [])
+      .concat([{ t: 'Начать', on: () => { goFull(); withCurtain(steps[0].p, () => jumpTo('restart')); } }, { t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
+    const tm = $('tm');
+    if (!music.unlocked()) {
+      tm.innerHTML = '<div class="tm-gate"><span>Нажмите, чтобы войти</span></div>';
+      tm.querySelector('.tm-gate').addEventListener('click', (e) => { e.stopPropagation(); goFull(); titleScreen(); });
+      tm.hidden = false;
+      return;
+    }
+    tm.innerHTML = '<div class="tm-lamp"></div><div class="tm-scrim"></div><div class="tm-vig"></div>'
+      + (LOGO ? '<h1 class="tm-h" style="--logo:url(&quot;' + LOGO + '&quot;)"><div class="tm-burst"></div>'
+                + '<img class="tm-logo" src="' + LOGO + '" alt="Second Empire — The Spirit of the Great February"><div class="tm-glint"></div></h1>'
+              : '<h1 class="tm-h tm-name">' + esc(SCRIPT.title.name) + '</h1>')
+      + '<nav class="tm-nav" aria-label="Главное меню">'
+      + items.map((b, n) => '<button class="tm-btn" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
+      + '<div class="tm-fade"></div>';
+    tm.querySelectorAll('.tm-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); items[+el.dataset.n].on(); }));
+    tm.hidden = false;
+  }
+
+
+  // backdrop, illustration, effect and cast of step i
+  function scenery(i) {
+    const s = steps[i];
+    setBg(i);
+    setCg(i);
+    warm(i);
+    fx.set(fxOf(i));
+    setCast(i, s.k === 'say' ? s.w : null);
+  }
+
+  function render() {
+    const fromBehind = atEnd;  // came back from the next step: a line in parts opens at its last part
+    atEnd = false;
+    if (cur < 0) { leaveRoll(); titleScreen(); return; }
+    const s = steps[cur];
+    stage.classList.remove('title');
+    $('tm').hidden = true;
+    if (s.k === 'credits') { rollCredits(s); return; }  // not autosaved: «Продолжить» opens on the end card, not inside the roll
+    leaveRoll();
+    markSeen(cur);
+    store.set('auto', snapshot());
+    syncJump();
+    music.set(musicOf(cur));
+    place.textContent = s.p;
+    if (forward && !mode.skip) playOnce(s);
+    forward = false;
+    layer.hidden = true; layer.innerHTML = '';
+    menu.hidden = true; menu.innerHTML = '';
+    stage.classList.toggle('dim', ['choice', 'fork', 'end', 'letter', 'doc'].includes(s.k));
+    stage.classList.toggle('cards', !!CARD_HINT[s.k]);
+    stage.classList.toggle('decide', ['fork', 'end'].includes(s.k));  // a card with buttons under it
+    scenery(cur);
+
+    if (CARD_HINT[s.k]) {
+      layer.innerHTML = cardHTML(s, cur);
+      layer.hidden = false;
+      fitCard();
+      narrBox(CARD_HINT[s.k](s), s.t || 'Нажмите, чтобы листать дальше.', true);
+      shown();
+      return;
+    }
+
+    if (s.k === 'say') {
+      const c = s.w ? CH[s.w] : null, role = c ? roleOf(cur, s.w) : '';
+      box.innerHTML = '<div class="who">' + (c ? '<span class="nm" style="--c:' + c.c + '">' + esc(c.n) + '</span>' + (role ? '<span class="role">' + esc(role) + '</span>' : '') : '') + '</div>'
+        + '<p class="tx' + (c ? '' : ' narr') + '" id="tx" aria-hidden="true"></p>'
+        + '<span class="sr" aria-live="polite">' + esc((c ? c.n + ': ' : '') + s.t) + '</span>'
+        + '<span class="more" id="more" hidden>▾</span>';
+      pages = paginate($('tx'), s.t);
+      pg = fromBehind ? pages.length - 1 : 0;
+      showPage();
+      return;
+    }
+
+    setSkip(false);
+    clearTimeout(autoTimer);
+    if (s.k === 'choice') {
+      narrBox('Развилка', s.ask, false);
+      menu.innerHTML = s.opts.map((o) => '<button class="opt" type="button" data-go="' + esc(o.go) + '">' + esc(o.t) + '</button>').join('');
+      menu.hidden = false;
+      menu.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => jumpTo(b.dataset.go)));
+      return;
+    }
+    if (s.k === 'fork') {
+      noteCard('<span class="stamp">' + esc(s.stamp) + '</span>', '', s.paras, s.note);
+      buttonsBox('Развилка', scriptButtons(s.buttons));
+      return;
+    }
+    if (s.k === 'end') {
+      noteCard('<div class="mast">ВЕДОМОСТИ РОССИИ</div><div class="dl"><span>' + esc(s.date) + '</span><span></span></div>', s.title, s.paras, s.note);
+      buttonsBox(SCRIPT.title.name, scriptButtons(s.buttons));
+    }
+  }
+
+  function advance() {
+    if (cur < 0 || !gm.hidden || curtain.classList.contains('on')) return;
+    if (mode.skip) setSkip(false);
+    const s = steps[cur];
+    if (s.k === 'credits') { toTitle(); return; }
+    if (timer) { finishType(); return; }
+    if (nextPage()) return;
+    if (passable(s)) go(cur + 1);
+  }
+
+  // ---------- credits: the cast roll ----------
+  // The characters pass upward over the black stage (the card `credits`, scenario.py): each with a portrait, the name,
+  // the caption and who played him; the logo last. A click or a key skips it; at the end, the title screen.
+  const roll = $('roll');
+  let rollAnim = null;
+  // The portrait of a character: his first look (the one worn) in its `original` emotion, the figure at Z of its stage
+  // size, placed so the face centre — 28 % of the stage height for the whole cast (CH top/h, measure_faces.py) — sits
+  // a little below the middle of the frame: room for the cap above, the shoulders below (the organizer, 16.10: at 0.72
+  // with the face in the middle the heads were «приплюснуты», crammed into the frame). A shadow (Wrangel) stays a shadow.
+  const FRAME_H = 44, PORTRAIT_Z = 1.0, FACE_AT = 0.5;  // cqh; the figure's scale; where in the frame the face centre sits
+  function portraitOf(who) {
+    const c = CH[who];
+    if (!c || !(c.looks || c.shade)) return null;
+    const sh = !c.looks && c.shade, src = sh ? sh.from : who;
+    const got = spriteFor(src, Object.keys(CH[src].looks)[0]);
+    if (!got.sprite) return null;
+    const emos = got.sprite.emotions, e = (sh && emos[sh.e]) ? sh.e : (emos.original ? 'original' : Object.keys(emos)[0]);
+    const placeAt = CH[src].looks[got.look] || { top: 5, h: 100 }, pt = got.sprite.pt || 0;
+    const full = placeAt.h / (1 - pt), top = placeAt.top - pt * full;
+    return { src: emos[e], cls: (sh ? ' shade' : '') + (sh && sh.flip ? ' flip' : ''), h: PORTRAIT_Z * full, w: PORTRAIT_Z * full * (got.sprite.ar || 0.8), top: FRAME_H * FACE_AT - PORTRAIT_Z * (28 - top) };
+  }
+  function rowHTML(r) {
+    if (r.h !== undefined) return '<li class="cr-h">' + esc(r.h) + '</li>';
+    if (r.t !== undefined) return '<li class="cr-t">' + esc(r.t) + '</li>';
+    const c = CH[r.l], p = c ? portraitOf(r.l) : null, role = c ? roleOf(cur, r.l) : '';
+    if (!p) return '<li class="cr nopic"><span class="cr-nm plain">' + esc(c ? c.n : r.l) + '</span><span class="cr-pl">' + esc(r.r) + '</span></li>';
+    // photos go left, right, left… and lean a little differently each time, as prints laid out on a table
+    const n = rowN++, tilt = [-3.4, 2.8, -2.2, 3.6][n % 4];
+    const photo = '<figure class="ph" style="--tilt:' + tilt + 'deg"><div class="ph-img' + p.cls + '"><img alt="" src="' + p.src + '" style="height:' + p.h.toFixed(2) + 'cqh;width:' + p.w.toFixed(2) + 'cqh;top:' + p.top.toFixed(2) + 'cqh"></div>'
+      + '<figcaption class="ph-sig">' + esc(c.n) + '</figcaption></figure>';
+    // beside it: the full name from the script (or the surname), the caption, and who voiced him (the organizer, 16.10:
+    // «снизу будет написано Ружик, справа — имя персонажа, его должность и кто его озвучивал»)
+    // the full name is split: the given name and patronymic small above, the surname large (a lowercase particle, «фон», stays
+    // with the surname); without a full name the surname alone
+    const words = (r.f || c.n).trim().split(/\s+/), sur = [words.pop()];
+    while (words.length && /^[a-zа-яё]/.test(words[words.length - 1])) sur.unshift(words.pop());
+    const text = '<div class="cr-txt">' + (words.length ? '<span class="cr-given">' + esc(words.join(' ')) + '</span>' : '')
+      + '<span class="cr-nm" style="--c:' + c.c + '">' + esc(sur.join(' ')) + '</span>' + (role ? '<span class="cr-role">' + esc(role) + '</span>' : '')
+      + '<span class="cr-pl">' + esc(r.r) + '</span></div>';
+    return '<li class="cr' + (n % 2 ? ' r' : '') + '">' + photo + text + '</li>';
+  }
+  let rowN = 0;
+  function rollCredits(s) {
+    stopAll();
+    // the game is played through: the autosave goes, so the title offers only «Начать» (the organizer, 16.10: «Продолжить»
+    // after the credits would only lead back into the credits)
+    store.drop('auto');
+    syncJump();
+    music.set(musicOf(cur));
+    place.textContent = s.p;
+    rowN = 0;
+    roll.innerHTML = '<ul class="roll-list">' + (s.title ? '<li class="cr-title">' + esc(s.title) + '</li>' : '') + s.rows.map(rowHTML).join('')
+      + (LOGO ? '<li class="cr-logo"><img src="' + LOGO + '" alt="Second Empire"></li>' : '') + '</ul>';
+    stage.classList.add('roll-on');
+    const list = roll.firstElementChild;
+    const run = () => {
+      if (steps[cur] !== s || !stage.classList.contains('roll-on')) return;
+      const H = stage.clientHeight, dist = list.offsetHeight + H;  // from under the stage to above it
+      if (!H) return;
+      // the roll climbs 12 % of the stage height a second: a character on screen for about eight seconds (17 % in the first
+      // version was «слишком быстро», 16.10); never under 30 s
+      rollAnim = list.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(' + (-dist) + 'px)' }],
+        { duration: Math.max(30000, dist / H / 0.12 * 1000), easing: 'linear', fill: 'forwards', delay: 900 });
+      rollAnim.onfinish = () => { rollAnim = null; if (steps[cur] === s) toTitle(); };
+    };
+    // the pictures set the list's height: wait for them, but not for long
+    const imgs = Array.from(roll.querySelectorAll('img'));
+    Promise.race([Promise.all(imgs.map((im) => im.decode().catch(() => {}))), new Promise((ok) => setTimeout(ok, 1500))]).then(run);
+  }
+  function leaveRoll() {
+    if (!stage.classList.contains('roll-on') && !roll.innerHTML) return;
+    if (rollAnim) { rollAnim.cancel(); rollAnim = null; }
+    stage.classList.remove('roll-on');
+    roll.innerHTML = '';
+  }
+
+  // ---------- game menu: history, settings, back to the title ----------
+  const gm = $('gm'), gmBody = $('gmBody');
+  let gmTab = null;
+  function openGM(tab) {
+    setSkip(false); clearTimeout(autoTimer); finishTypeQuiet();
+    gmTab = tab; gm.hidden = false; stage.classList.add('gm-open'); drawGM();
+  }
+  function finishTypeQuiet() { if (timer) { stopType(); const el = $('tx'); if (el) el.textContent = full; const m = $('more'); if (m) m.hidden = false; } }
+  function closeGM() {
+    if (gm.hidden) return;
+    gm.hidden = true; stage.classList.remove('gm-open'); gmTab = null;
+    if (mode.auto && cur >= 0) scheduleAuto();
+  }
+  function drawGM() {
+    gm.querySelectorAll('[data-gm]').forEach((b) => {
+      b.classList.toggle('on', b.dataset.gm === gmTab);
+      b.hidden = cur < 0 && b.dataset.gm === 'history';
+    });
+    if (gmTab === 'history') {
+      const rows = hist.concat([cur]).filter((i) => i >= 0).map((i) => {
+        const s = steps[i];
+        if (s.k === 'say') return s.w ? '<p class="hl"><b style="--c:' + CH[s.w].c + '">' + esc(CH[s.w].n) + '</b>' + esc(s.t) + '</p>' : '<p class="hl narr">' + esc(s.t) + '</p>';
+        if (CARD_HINT[s.k] || s.k === 'choice') return '<p class="hl card">' + esc(lineText(s)) + '</p>';
+        return '';
+      }).join('');
+      gmBody.innerHTML = '<h2 class="gm-h">История</h2><div class="hist">' + (rows || '<p class="hl narr">Пока пусто.</p>') + '</div>';
+      gmBody.scrollTop = gmBody.scrollHeight;
+      return;
+    }
+    // settings
+    gmBody.innerHTML = '<h2 class="gm-h">Настройки</h2>'
+      + '<label class="pref"><span>Скорость текста</span><input type="range" min="1" max="10" step="1" data-pref="speed" value="' + prefs.speed + '"></label>'
+      + '<label class="pref"><span>Задержка авточтения</span><input type="range" min="1" max="10" step="1" data-pref="auto" value="' + prefs.auto + '"></label>'
+      + '<label class="pref"><span>Громкость музыки</span><input type="range" min="0" max="10" step="1" data-pref="music" value="' + prefs.music + '"></label>'
+      + '<label class="pref chk"><input type="checkbox" data-pref="mute"' + (prefs.mute ? ' checked' : '') + '><span>Без музыки</span></label>'
+      + '<label class="pref chk"><input type="checkbox" data-pref="skipUnseen"' + (prefs.skipUnseen ? ' checked' : '') + '><span>Пропускать и непрочитанный текст</span></label>'
+      + (document.fullscreenEnabled ? '<button type="button" class="pg" data-act="fullscreen">' + (document.fullscreenElement ? 'Выйти из полного экрана' : 'Полный экран') + '</button>' : '');
+  }
+  gm.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const nav = e.target.closest('[data-gm]');
+    if (nav) {
+      const t = nav.dataset.gm;
+      if (t === 'close') closeGM(); else if (t === 'title') toTitle(); else if (t === 'exit') exitGame(); else { gmTab = t; drawGM(); }
+      return;
+    }
+    const act = e.target.closest('[data-act="fullscreen"]');
+    if (act) {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else { prefs.fullscreen = true; goFull(); }
+      setTimeout(drawGM, 300);
+      return;
+    }
+  });
+  gm.addEventListener('input', (e) => {
+    const k = e.target.dataset.pref;
+    if (!k) return;
+    prefs[k] = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
+    store.set('prefs', prefs);
+    if (k === 'music' || k === 'mute') {
+      $('qm').querySelector('[data-q="sound"]').classList.toggle('muted', !!prefs.mute);
+      music.sync();
+    }
+  });
+
+  // ---------- quick menu ----------
+  $('qm').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || cur < 0) return;
+    e.stopPropagation();
+    const q = b.dataset.q;
+    if (q === 'back') back();
+    else if (q === 'history') openGM('history');
+    else if (q === 'skip') setSkip(!mode.skip);
+    else if (q === 'auto') setAuto(!mode.auto);
+    else if (q === 'hide') { stage.classList.add('clean'); clearTimeout(autoTimer); }
+    else if (q === 'sound') setMute(!prefs.mute);
+    else if (q === 'prefs') openGM('prefs');
+  });
+
+  // ---------- mouse and keys ----------
+  stage.addEventListener('click', (e) => {
+    if (stage.classList.contains('clean')) { stage.classList.remove('clean'); if (mode.auto) scheduleAuto(); return; }
+    if (e.target.closest('button, a, select, .hud, .layer, .gm, .qm')) return;
+    advance();
+  });
+  // A click on a card is the card's alone: advancing replaces the card, and the stage's handler below would no longer
+  // see the click as one inside the card (its target is gone from the page) and advance a second time — every
+  // card that followed a card was skipped (the second OGPU order, 14.10).
+  layer.addEventListener('click', (e) => { e.stopPropagation(); if (!e.target.closest('button, a')) advance(); });
+  stage.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); });
+  let wheelAt = 0;
+  stage.addEventListener('wheel', (e) => {
+    if (!gm.hidden || cur < 0) return;
+    const now = Date.now();
+    if (now - wheelAt < 250) return;
+    wheelAt = now;
+    if (e.deltaY < 0) back(); else if (e.deltaY > 0) advance();
+  }, { passive: true });
+  // scene switcher: jump straight to a scene instead of clicking through
+  const jump = $('jump');
+  jump.addEventListener('change', () => { stopAll(); go(at(jump.value)); stage.focus(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); return; }
+    if (!gm.hidden) return;
+    if (stage.classList.contains('clean')) { e.preventDefault(); stage.classList.remove('clean'); return; }
+    if (cur < 0) { if ((e.key === ' ' || e.key === 'Enter') && $('tm').querySelector('.tm-gate')) { e.preventDefault(); goFull(); titleScreen(); } return; }
+    const onControl = e.target.closest && e.target.closest('button, a');
+    const key = e.key.toLowerCase();
+    if ((e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'PageDown') && !onControl) { e.preventDefault(); advance(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') { e.preventDefault(); back(); }
+    else if (e.key === 'Tab') { e.preventDefault(); setSkip(!mode.skip); }
+    else if (e.key === 'Control' && !e.repeat && !mode.skip) { setSkip(true); mode.ctrl = true; }
+    else if (key === 'a' || key === 'ф') setAuto(!mode.auto);
+    else if (key === 'h' || key === 'р') { stage.classList.add('clean'); clearTimeout(autoTimer); }
+    else if (key === 'm' || key === 'ь') setMute(!prefs.mute);
+  });
+  document.addEventListener('keyup', (e) => { if (e.key === 'Control' && mode.ctrl) setSkip(false); });
+  window.addEventListener('blur', () => { if (mode.ctrl) setSkip(false); });
+
+  $('qm').querySelector('[data-q="sound"]').classList.toggle('muted', !!prefs.mute);
+
+  // deep link for testing: #<scene id> opens that scene
+  const deep = location.hash.slice(1);
+  if (deep && at(deep) >= 0) cur = at(deep);
+  render();
+})();
+</script>
