@@ -806,7 +806,10 @@ select.chip option{background:var(--wall-bot);color:var(--fg)}
     // strip can go: it cannot, it is Telegram's (16.10).
     const insets = () => {
       const a = TG.safeAreaInset || {}, c = TG.contentSafeAreaInset || {};
-      const top = (a.top || 0) + (c.top || 0), bottom = a.bottom || 0;
+      let top = (a.top || 0) + (c.top || 0), bottom = a.bottom || 0;
+      // a client that is full screen but reports no insets (the organizer's phone, 16.10: the clock and «Закрыть» lay
+      // over the HUD and the sprites): the strip is taken as a fifth of the screen, measured on his screenshot
+      if (TG.isFullscreen && top < 8) top = Math.round(innerHeight * 0.2);
       document.documentElement.style.setProperty('--tg-top', top + 'px');
       document.documentElement.style.setProperty('--tg-bottom', bottom + 'px');
       document.body.style.paddingTop = top + 'px';
