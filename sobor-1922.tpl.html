@@ -179,12 +179,14 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .sh-h{position:absolute;right:3cqw;bottom:7cqh;margin:0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.36em;text-transform:uppercase;color:var(--muted)}
 .sh-card{position:absolute;left:50%;top:15cqh;width:60cqw;aspect-ratio:16/9;transform:translateX(-50%);border-radius:1.2cqh;overflow:hidden;background:#120c0a;box-shadow:0 2cqh 6cqh rgba(0,0,0,.85),0 0 0 1px rgba(207,168,80,.4);cursor:pointer;animation:sh-in .5s ease-out both}
 .sh-card img{display:block;width:100%;height:100%;object-fit:cover}
-.sh-card.locked img{filter:grayscale(.8) brightness(.45)}
+.sh-card.soon{display:grid;place-items:center;background:radial-gradient(60% 70% at 50% 45%, #241812, #0d0908 90%);box-shadow:0 2cqh 6cqh rgba(0,0,0,.85),0 0 0 1px var(--line);cursor:default}
+.sh-card.soon span{font-family:var(--f-display);font-size:7cqh;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
 @keyframes sh-in{from{opacity:0;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1)}}
-.sh-arrow{position:absolute;top:15cqh;height:60cqh;width:14cqw;display:grid;place-items:center;appearance:none;background:none;border:0;color:var(--bone);font-family:var(--f-display);font-size:11cqh;line-height:1;cursor:pointer;opacity:.7}
-.sh-arrow.l{left:1cqw}.sh-arrow.r{right:1cqw}
-.sh-arrow:disabled{opacity:.12;cursor:default}
-.sh-arrow:hover:not(:disabled),.sh-arrow:focus-visible{opacity:1;outline:none}
+/* the arrows (17.10, redrawn): a thin chevron in a faint ring, only on the side there is a chapter to turn to */
+.sh-arrow{position:absolute;top:calc(15cqh + 30cqh - 5.5cqh);width:11cqh;height:11cqh;display:grid;place-items:center;appearance:none;background:rgba(236,228,214,.04);border:1px solid var(--line);border-radius:50%;color:var(--bone);cursor:pointer;opacity:.75;transition:opacity .2s, border-color .2s, background .2s}
+.sh-arrow svg{width:4.6cqh;height:4.6cqh;display:block}
+.sh-arrow.l{left:4.5cqw}.sh-arrow.r{right:4.5cqw}
+.sh-arrow:hover,.sh-arrow:focus-visible{opacity:1;border-color:var(--gold);background:rgba(207,168,80,.12);outline:none}
 .sh-info{position:absolute;left:0;right:0;top:78.5cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;color:var(--muted)}
 .sh-info b{font-weight:500;color:var(--fg)}
 .sh-nav{position:absolute;left:0;right:0;bottom:5cqh;display:flex;justify-content:center;gap:2.4cqw}
@@ -384,6 +386,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const CGS = '__CGS__';
   // Chapter covers for the shelf: chapters/<name>.png, as { name: url }; the 4th field of the `title` line names one.
   const COVERS = '__COVERS__';
+  // The shelf's own music (SHELF_MUSIC in build.py), for chapters without a theme of their own.
+  const SHELF_MUSIC = '__SHELF_MUSIC__';
   // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
   // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
   const MUSIC = '__MUSIC__';
@@ -1157,7 +1161,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 
   // ---------- the chapter shelf ----------
   // One chapter so far; the list is ready for more: each entry is a `title` line (name, years, cover, theme).
-  const CHAPTERS = [{ id: SCRIPT.title.cover || 'prolog', t: SCRIPT.title, cover: COVERS[SCRIPT.title.cover] || '' }];
+  // after the last chapter a card that says «Скоро» (the organizer, 17.10): nothing to start, only a promise
+  const CHAPTERS = [{ id: SCRIPT.title.cover || 'prolog', t: SCRIPT.title, cover: COVERS[SCRIPT.title.cover] || '' }, { id: 'soon', soon: true, t: { name: 'Скоро', span: '', theme: '' } }];
   let shelfOpen = false, shelfAt = 0;
   const sh = $('sh');
   // Between the title and the shelf, both ways (the organizer, 17.10: not «моментально», the march must not cut straight
@@ -1186,22 +1191,27 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     stage.classList.remove('title', 'dim', 'cards', 'decide');
     $('tm').hidden = true; menu.hidden = true; menu.innerHTML = ''; layer.hidden = true; layer.innerHTML = ''; box.innerHTML = '';
     const ch = CHAPTERS[shelfAt], last = store.get('auto', null), done = !!store.get('done', {})[ch.id];
-    music.set(ch.t.theme || '');
+    music.set(ch.t.theme || SHELF_MUSIC || '');
     const btns = [];
+    if (ch.soon) { /* no buttons: there is nothing to start yet */ } else {
     if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last))) });
     btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => withCurtain(steps[0].p, () => jumpTo('restart'))) });
     if (done) btns.push({ t: 'Титры', ghost: true, on: () => startChapter(() => { const i = steps.findIndex((s) => s.k === 'credits'); if (i >= 0) withCurtain('', () => goNow(i)); }) });
+    }
+    const chevron = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     sh.innerHTML = '<h2 class="sh-h">Главы</h2>'
-      + '<button class="sh-arrow l" type="button" aria-label="Предыдущая глава"' + (shelfAt > 0 ? '' : ' disabled') + '>‹</button>'
-      + '<div class="sh-card" role="button" tabindex="0" aria-label="' + esc(ch.t.name) + '">' + (ch.cover ? '<img src="' + ch.cover + '" alt="">' : '') + '</div>'
-      + '<button class="sh-arrow r" type="button" aria-label="Следующая глава"' + (shelfAt < CHAPTERS.length - 1 ? '' : ' disabled') + '>›</button>'
+      + (shelfAt > 0 ? '<button class="sh-arrow l" type="button" aria-label="Предыдущая глава">' + chevron(-1) + '</button>' : '')
+      + (ch.soon ? '<div class="sh-card soon" aria-label="Скоро"><span>Скоро</span></div>'
+                 : '<div class="sh-card" role="button" tabindex="0" aria-label="' + esc(ch.t.name) + '">' + (ch.cover ? '<img src="' + ch.cover + '" alt="">' : '') + '</div>')
+      + (shelfAt < CHAPTERS.length - 1 ? '<button class="sh-arrow r" type="button" aria-label="Следующая глава">' + chevron(1) + '</button>' : '')
       + '<p class="sh-info"><b>' + esc(ch.t.span) + '</b></p>'  // only the years: the organizer wants no «не начато / сцена N» here (17.10)
       + '<nav class="sh-nav">' + btns.map((b, n) => '<button class="sh-btn' + (b.ghost ? ' ghost' : '') + '" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
       + '<button class="sh-back" type="button">← На титул</button>';
     sh.querySelectorAll('.sh-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); btns[+el.dataset.n].on(); }));
-    sh.querySelector('.sh-card').addEventListener('click', (e) => { e.stopPropagation(); btns[0].on(); });
-    sh.querySelector('.sh-arrow.l').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(-1); });
-    sh.querySelector('.sh-arrow.r').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(1); });
+    if (btns.length) sh.querySelector('.sh-card').addEventListener('click', (e) => { e.stopPropagation(); btns[0].on(); });
+    const al = sh.querySelector('.sh-arrow.l'), ar = sh.querySelector('.sh-arrow.r');
+    if (al) al.addEventListener('click', (e) => { e.stopPropagation(); shelfMove(-1); });
+    if (ar) ar.addEventListener('click', (e) => { e.stopPropagation(); shelfMove(1); });
     sh.querySelector('.sh-back').addEventListener('click', (e) => { e.stopPropagation(); shelfToTitle(); });
   }
   // a swipe across the shelf turns the page
