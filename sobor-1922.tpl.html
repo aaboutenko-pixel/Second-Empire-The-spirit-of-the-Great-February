@@ -235,7 +235,10 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .tm-btn::after{content:"";display:block;width:0;height:.09em;background:var(--gold);box-shadow:0 0 8px var(--halo);transition:width .3s}
 .tm-btn:hover,.tm-btn:focus-visible{color:var(--gold);gap:1.4cqw;outline:none}
 .tm-btn:hover::after,.tm-btn:focus-visible::after{width:4cqw}
-.tm-btn:nth-child(1){animation-delay:1.6s}.tm-btn:nth-child(2){animation-delay:1.85s}.tm-btn:nth-child(3){animation-delay:2.1s}.tm-btn:nth-child(4){animation-delay:2.35s}.tm-btn:nth-child(5){animation-delay:2.6s}.tm-btn:nth-child(6){animation-delay:2.85s}  /* up to six: Продолжить, Начать, Персонажи, Настройки, Выйти (the fifth and sixth used to pop in at once, 17.10) */
+.tm-btn:nth-child(1){animation-delay:1.6s}.tm-btn:nth-child(2){animation-delay:1.85s}.tm-btn:nth-child(3){animation-delay:2.1s}.tm-links{position:absolute;left:4cqw;bottom:3.6cqh;z-index:2;margin:0;display:flex;align-items:center;gap:1cqw;font-family:var(--f-mono);font-size:1.9cqh;letter-spacing:.12em;color:var(--muted);animation:tm-in 1.3s 2.9s ease-out both}
+.tm-link{appearance:none;background:none;border:0;padding:.2em 0;font:inherit;letter-spacing:inherit;color:var(--muted);cursor:pointer}
+.tm-link:hover,.tm-link:focus-visible{color:var(--fg);outline:none}
+.tm-btn:nth-child(4){animation-delay:2.35s}.tm-btn:nth-child(5){animation-delay:2.6s}.tm-btn:nth-child(6){animation-delay:2.85s}  /* up to six: Продолжить, Начать, Персонажи, Настройки, Выйти (the fifth and sixth used to pop in at once, 17.10) */
 @keyframes tm-in{from{opacity:0;transform:translateY(1.5cqh)}to{opacity:1;transform:none}}
 .stage.title .scrim{opacity:0;pointer-events:none}
 .stage.title .box{display:none}
@@ -303,6 +306,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .sc:hover,.sc:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .sc.on{color:var(--gold);border-color:var(--gold)}
 .sc.off{opacity:.45;cursor:default;letter-spacing:.2em}
+.sc.mark{color:var(--fg);border-style:dashed}
 /* «Персонажи» (17.10): the characters met so far, each with a card — the figure with its emotions to try on (as the
    sprite gallery of «Бесконечное лето»), the full name, the caption and the biography by chapters. */
 /* the card fills the menu's body; only the text column scrolls (the organizer, 17.10), the figure and the list stay */
@@ -423,6 +427,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // Character biographies (scenario/bio/<who>.txt, 17.10): { who: { full, sections: [{ ch, paras }] } }. A card opens
   // the first time the character stands on the stage; its chapters open as the reader reaches them.
   const BIOS = '__BIOS__';
+  // «Поделиться» / «Отзыв» on the title: { share: url or '', feedback: url } (SHARE_URL, FEEDBACK_URL in build.py).
+  const LINKS = '__LINKS__';
   // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
   // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
   const MUSIC = '__MUSIC__';
@@ -700,10 +706,81 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   })();
   // one-off effects of a step, played when the reader arrives at it going forward
   function playOnce(s) {
-    if (!s.once || reduced) return;
-    if (s.once.includes('flash')) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
-    if (s.once.includes('shake')) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 600); }
+    if (CARD_HINT[s.k]) sfx.play(s.k === 'wire' ? 'wire' : 'paper');
+    if (!s.once) return;
+    if (s.once.includes('flash')) { sfx.play('crack'); if (!reduced) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); } }
+    if (s.once.includes('shake')) { sfx.play('boom'); if (!reduced) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 600); } }
   }
+
+  // ---------- sound effects (17.10) ----------
+  // Short sounds made on the spot with the Web Audio API — no files, no licences to check: the telegraph key for a
+  // wire, paper for a newspaper, a letter or a decree, a blast with @shake, a crack with @flash. Volume follows the
+  // music setting and its mute. (If the organizer ever wants recordings instead, they would go to sfx/<kind>.mp3.)
+  const sfx = (() => {
+    let ctx = null;
+    const ac = () => {
+      if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; } }
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    };
+    const noise = (c, secs) => {
+      const b = c.createBuffer(1, Math.ceil(c.sampleRate * secs), c.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = c.createBufferSource(); src.buffer = b; return src;
+    };
+    const make = {
+      wire(c, out) {  // Morse on the sounder: dits and dahs of a 880 Hz tone
+        let t = c.currentTime + 0.02;
+        for (let i = 0; i < 9; i++) {
+          const len = Math.random() < 0.35 ? 0.13 : 0.05;
+          const o = c.createOscillator(), g = c.createGain();
+          o.type = 'square'; o.frequency.value = 880;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.005); g.gain.setValueAtTime(0.18, t + len - 0.005); g.gain.linearRampToValueAtTime(0, t + len);
+          o.connect(g); g.connect(out); o.start(t); o.stop(t + len + 0.01);
+          t += len + (Math.random() < 0.25 ? 0.16 : 0.06);
+        }
+      },
+      paper(c, out) {  // two swishes of filtered noise
+        for (const [at, len] of [[0, 0.28], [0.16, 0.32]]) {
+          const n = noise(c, len), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime + at;
+          f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 0.7;
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+          n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t + len);
+        }
+      },
+      boom(c, out) {  // a low blast that rolls away
+        const t = c.currentTime, n = noise(c, 1.4), f = c.createBiquadFilter(), g = c.createGain();
+        f.type = 'lowpass'; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(60, t + 1.2);
+        g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+        n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t + 1.4);
+        const o = c.createOscillator(), og = c.createGain();
+        o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(30, t + 1);
+        og.gain.setValueAtTime(0.6, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 1);
+        o.connect(og); og.connect(out); o.start(t); o.stop(t + 1);
+      },
+      crack(c, out) {  // a sharp report with a thump under it
+        const t = c.currentTime;
+        const n = noise(c, 0.25), f = c.createBiquadFilter(), g = c.createGain();
+        f.type = 'highpass'; f.frequency.value = 900;
+        g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t + 0.25);
+        const n2 = noise(c, 0.3), f2 = c.createBiquadFilter(), g2 = c.createGain();
+        f2.type = 'lowpass'; f2.frequency.value = 200;
+        g2.gain.setValueAtTime(0.7, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        n2.connect(f2); f2.connect(g2); g2.connect(out); n2.start(t); n2.stop(t + 0.3);
+      },
+    };
+    return {
+      play(kind) {
+        if (!make[kind] || !music.unlocked() || prefs.mute) return;
+        const v = Math.min(1, prefs.music / 10) * 0.7;
+        if (!v) return;
+        const c = ac(); if (!c) return;
+        const out = c.createGain(); out.gain.value = v; out.connect(c.destination);
+        try { make[kind](c, out); } catch (e) { /* a sound that fails is no harm */ }
+      },
+    };
+  })();
 
   // The pictures are separate files: the ones the next steps need are fetched ahead of the reader, nearest
   // first, so a new emotion or backdrop does not appear with a blink. Loaded pictures stay in the browser cache.
@@ -961,8 +1038,11 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function back() {
     if (!gm.hidden) return;
     if (cur >= 0 && steps[cur].k === 'say' && pg > 0) { setSkip(false); stopType(); clearTimeout(autoTimer); pg--; showPage(); return; }
-    if (!hist.length) return;
-    setSkip(false); stopType(); clearTimeout(autoTimer); cur = hist.pop(); atEnd = true; render();
+    // no history (after a restart of the page the autosave carries none): the previous line of the script, so «Назад»
+    // always works, even after re-entering the game (the organizer, 17.10)
+    const to = hist.length ? hist.pop() : cur - 1;
+    if (to < 0 || steps[to].k === 'credits') return;
+    setSkip(false); stopType(); clearTimeout(autoTimer); cur = to; atEnd = true; render();
   }
   // Every way back to the title goes through the loading curtain (the organizer, 17.10: «чтобы везде была загрузка»)
   function toTitleNow() { stopAll(); hist = []; cur = -1; shelfOpen = false; closeGM(); render(); }
@@ -1256,6 +1336,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // after the last chapter a card that says «Скоро» (the organizer, 17.10): nothing to start, only a promise
   const CHAPTERS = [{ id: SCRIPT.title.cover || 'prolog', t: SCRIPT.title, cover: COVERS[SCRIPT.title.cover] || '' }, { id: 'soon', soon: true, t: { name: 'Скоро', span: '', theme: '' } }];
   let shelfOpen = false, shelfAt = 0;
+  let mark = -1;  // the step left behind by a jump through «Сцены» (17.10)
   const sh = $('sh');
   // Between the title and the shelf, both ways (the organizer, 17.10: not «моментально», the march must not cut straight
   // into another tune): the music goes, the curtain falls with a short loading line, the other screen is drawn under it.
@@ -1315,6 +1396,19 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (Math.abs(dx) > 40) shelfMove(dx < 0 ? 1 : -1);
   }, { passive: true });
 
+  // «Поделиться» (the organizer, 17.10: «нам нужна аудитория») and «Отзыв» (a chat with the organizer). Inside Telegram
+  // the links open through the app; in a browser, the share sheet where there is one, else Telegram's share page.
+  const GAME_URL = () => LINKS.share || location.href.split(/[?#]/)[0];
+  function openLink(url) {
+    if (TG && TG.openTelegramLink && /^https:\/\/t\.me\//.test(url)) { try { TG.openTelegramLink(url); return; } catch (e) { /* fall through */ } }
+    window.open(url, '_blank', 'noopener');
+  }
+  function shareGame() {
+    const url = GAME_URL(), text = 'Second Empire — визуальная новелла по ролевой «Российская империя»';
+    if (!TG && navigator.share) { navigator.share({ title: 'Second Empire', text, url }).catch(() => {}); return; }
+    openLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
+  }
+
   function titleScreen() {
     setBg(-1);
     setCg(-1);
@@ -1347,8 +1441,10 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
               : '<h1 class="tm-h tm-name">' + esc(SCRIPT.title.name) + '</h1>')
       + '<nav class="tm-nav" aria-label="Главное меню">'
       + items.map((b, n) => '<button class="tm-btn" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
+      + '<p class="tm-links"><button class="tm-link" type="button" data-link="share">Поделиться</button><span>·</span><button class="tm-link" type="button" data-link="feedback">Отзыв</button></p>'
       + '<div class="tm-fade"></div>';
     tm.querySelectorAll('.tm-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); items[+el.dataset.n].on(); }));
+    tm.querySelectorAll('.tm-link').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); if (el.dataset.link === 'share') shareGame(); else openLink(LINKS.feedback); }));
     tm.hidden = false;
   }
 
@@ -1548,6 +1644,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       // reached = its first step has been read (the `seen` marks); the current scene always counts
       const reached = (sc) => !LOCKED || sc.id === now || seen.has(steps[at(sc.id)].h);
       gmBody.innerHTML = '<h2 class="gm-h">Сцены</h2><div class="scenes">'
+        + (mark >= 0 && mark !== cur ? '<button type="button" class="sc mark" data-scene="__mark">← Туда, где остановился</button><span style="flex-basis:100%"></span>' : '')
         + SCRIPT.scenes.map((sc, n) => reached(sc)
           ? '<button type="button" class="sc' + (sc.id === now ? ' on' : '') + '" data-scene="' + esc(sc.id) + '">' + esc(sc.label) + '</button>'
           : '<button type="button" class="sc off" disabled aria-label="Сцена ' + (n + 1) + ', ещё не открыта">' + (n + 1) + ' · · ·</button>').join('') + '</div>';
@@ -1576,7 +1673,12 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (bl) { bioSel.look = bl.dataset.look; drawBios(); return; }
     if (be) { bioSel.e = be.dataset.emo; drawBios(); return; }
     const sc = e.target.closest('[data-scene]');
-    if (sc) { closeGM(); stopAll(); const i = at(sc.dataset.scene); loadThen(() => go(i)); stage.focus(); return; }  // a jump through the loading curtain too
+    if (sc) {  // a jump through the loading curtain; the place left behind is kept for «Туда, где остановился»
+      closeGM(); stopAll(); const i = at(sc.dataset.scene);
+      if (sc.dataset.scene === '__mark') { const m = mark; mark = -1; loadThen(() => go(m)); }
+      else { if (cur >= 0 && i !== cur) mark = cur; loadThen(() => go(i)); }
+      stage.focus(); return;
+    }
     const act = e.target.closest('[data-act="fullscreen"]');
     if (act) {
       if (TG && TG.requestFullscreen) { if (TG.isFullscreen) { try { TG.exitFullscreen(); } catch (e) {} } else { prefs.fullscreen = true; goFull(); } }
