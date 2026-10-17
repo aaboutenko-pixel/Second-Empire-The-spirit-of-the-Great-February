@@ -851,8 +851,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function exitGame() {
     if (TG && TG.close) { TG.close(); return; }
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    toTitle();
-    window.close();
+    stopAll(); closeGM();
+    loadThen(() => { toTitleNow(); window.close(); });
   }
   const CPS = [10, 15, 20, 30, 40, 50, 65, 85, 120, Infinity]; // characters per second for the speed setting 1..10
   const seen = new Set(store.get('seen', []));
@@ -932,7 +932,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (!hist.length) return;
     setSkip(false); stopType(); clearTimeout(autoTimer); cur = hist.pop(); atEnd = true; render();
   }
-  function toTitle() { stopAll(); hist = []; cur = -1; closeGM(); render(); }
+  // Every way back to the title goes through the loading curtain (the organizer, 17.10: «чтобы везде была загрузка»)
+  function toTitleNow() { stopAll(); hist = []; cur = -1; shelfOpen = false; closeGM(); render(); }
+  function toTitle() { stopAll(); closeGM(); loadThen(toTitleNow); }
   function jumpTo(target) {
     if (target === 'restart') { stopAll(); hist = []; cur = 0; render(); }
     else if (target === 'title') toTitle();
@@ -1477,7 +1479,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       return;
     }
     const sc = e.target.closest('[data-scene]');
-    if (sc) { closeGM(); stopAll(); go(at(sc.dataset.scene)); stage.focus(); return; }
+    if (sc) { closeGM(); stopAll(); const i = at(sc.dataset.scene); loadThen(() => go(i)); stage.focus(); return; }  // a jump through the loading curtain too
     const act = e.target.closest('[data-act="fullscreen"]');
     if (act) {
       if (TG && TG.requestFullscreen) { if (TG.isFullscreen) { try { TG.exitFullscreen(); } catch (e) {} } else { prefs.fullscreen = true; goFull(); } }
