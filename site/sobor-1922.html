@@ -389,7 +389,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       <button type="button" data-gm="close">Вернуться</button>
       <button type="button" data-gm="history">История</button>
       <button type="button" data-gm="scenes">Сцены</button>
-      <button type="button" data-gm="bios">Персонажи</button>
       <button type="button" data-gm="prefs">Настройки</button>
       <button type="button" data-gm="title">Главное меню</button>
     </nav>
@@ -1316,7 +1315,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (last && last.cur < steps.length) warm(last.cur);
     warm(0);
     const items = (last ? [{ t: 'Продолжить', on: () => { goFull(); loadThen(() => restore(last)); } }] : [])  // the loading curtain, as everywhere (17.10)
-      .concat([{ t: 'Начать', on: () => { goFull(); openShelf(); } }, { t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
+      .concat([{ t: 'Начать', on: () => { goFull(); openShelf(); } }])
+      .concat(bioOpen.size ? [{ t: 'Персонажи', on: () => openGM('bios') }] : [])  // its own screen, once someone has been met (17.10)
+      .concat([{ t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
     CHAPTERS.forEach((ch) => { if (ch.cover) { const im = new Image(); im.src = ch.cover; } });  // the cover is ready before the shelf opens
     const tm = $('tm');
     if (!music.unlocked()) {
@@ -1512,7 +1513,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     gm.querySelectorAll('[data-gm]').forEach((b) => {
       b.classList.toggle('on', b.dataset.gm === gmTab);
       b.hidden = (cur < 0 && ['history', 'scenes', 'title'].includes(b.dataset.gm))  // on the title itself these make no sense
-        || (b.dataset.gm === 'bios' && !bioOpen.size);  // nobody met yet
+        || (gmTab === 'bios' && b.dataset.gm !== 'close');  // «Персонажи» is its own screen from the title: only «Вернуться» beside it
     });
     if (gmTab === 'history') {
       const rows = hist.concat([cur]).filter((i) => i >= 0).map((i) => {
