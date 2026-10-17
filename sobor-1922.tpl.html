@@ -1058,7 +1058,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     const looks = Object.keys(c.looks || {}).filter((l) => sets[l]);
     if (!bioSel.look || !sets[bioSel.look]) bioSel.look = looks[0] || null;
     const sprite = bioSel.look ? sets[bioSel.look] : null;
-    const emos = sprite ? Object.keys(sprite.emotions) : [];
+    const ORDER = ['original', 'happy', 'thinking', 'sad', 'unhappy', 'angry', 'shocked', 'embarassed', 'embarrassed', 'emberassed', 'embarrased'];
+    const emos = sprite ? Object.keys(sprite.emotions).sort((x, y) => (ORDER.indexOf(x) + 1 || 99) - (ORDER.indexOf(y) + 1 || 99)) : [];  // «обычный» first
     if (sprite && !sprite.emotions[bioSel.e]) bioSel.e = emos.includes('original') ? 'original' : emos[0];
     const reached = new Set([SCRIPT.title.name]);  // chapters the reader has: this one (more when there are more)
     const sections = b.sections.filter((sec) => reached.has(sec.ch));
