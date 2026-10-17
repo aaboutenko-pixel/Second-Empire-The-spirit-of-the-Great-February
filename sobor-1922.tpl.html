@@ -333,6 +333,11 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .pref input[type=range]{width:100%;accent-color:var(--gold)}
 .pref.chk{grid-template-columns:auto 1fr;justify-content:start}
 .pref input[type=checkbox]{width:1.1em;height:1.1em;margin:0;accent-color:var(--gold)}
+/* «Открыта биография»: a plate that slides in from the left edge just above the text box and slides back (the
+   organizer's sketch, 17.10) */
+.bio-toast{position:absolute;left:0;bottom:37.5cqh;z-index:7;max-width:46cqw;padding:1.2cqh 2.2cqw 1.2cqh 1.8cqw;background:var(--panel);border:1px solid var(--line);border-left:.4cqw solid var(--gold);border-radius:0 .9cqh .9cqh 0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.06em;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-105%);transition:transform .45s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+.bio-toast.show{transform:translateX(0)}
+.bio-toast b{color:var(--gold);font-weight:500}
 .toast{position:absolute;left:50%;top:11cqh;transform:translateX(-50%);z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.5em 1.3em;font-family:var(--f-mono);font-size:2.1cqh;color:var(--fg);pointer-events:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
@@ -396,6 +401,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   </div>
   <p class="ver" id="ver"></p>
   <div class="toast" id="toast" role="status" hidden></div>
+  <div class="bio-toast" id="bioToast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
@@ -1041,12 +1047,21 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // A character's card opens the first time he stands on the stage (or speaks): a toast says so, the set is kept
   // in the storage. The menu tab «Персонажи» lists the opened cards.
   const bioOpen = new Set(store.get('bios', []));
+  const bioToast = $('bioToast');
+  let bioQueue = [], bioBusy = false;
+  function bioPlate() {  // the plates come one after another: in, a pause, out
+    if (bioBusy || !bioQueue.length) return;
+    bioBusy = true;
+    bioToast.innerHTML = 'Открыта биография: <b>' + esc(bioQueue.shift()) + '</b>';
+    bioToast.classList.add('show');
+    setTimeout(() => { bioToast.classList.remove('show'); setTimeout(() => { bioBusy = false; bioPlate(); }, 550); }, 2600);
+  }
   function openBios(i) {
     const s = steps[i], who = stageOf(i).concat(s.k === 'say' && s.w ? [s.w] : []);
     who.forEach((w) => {
       if (!BIOS[w] || bioOpen.has(w)) return;
       bioOpen.add(w); store.set('bios', [...bioOpen]);
-      if (!mode.skip) toast('Открыта биография: ' + CH[w].n, 2600);
+      if (!mode.skip) { bioQueue.push(CH[w].n); bioPlate(); }
     });
   }
   // the card: which character, look and emotion are shown
