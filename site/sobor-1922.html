@@ -291,6 +291,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .gm-nav button.on{color:var(--gold)}
 .gm-nav button[hidden]{display:none}
 .gm-body{min-width:0;overflow:auto;padding:7cqh 4cqw 5cqh}
+.gm-body.fixed{overflow:hidden}
 .gm-h{font-family:var(--f-display);font-weight:700;font-size:5.6cqh;margin:0 0 3cqh;color:var(--gold)}
 .hist{display:flex;flex-direction:column;gap:1.8cqh;max-width:62cqw}
 .hl{margin:0;font-size:3cqh;line-height:1.45}
@@ -304,12 +305,14 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .sc.off{opacity:.45;cursor:default;letter-spacing:.2em}
 /* «Персонажи» (17.10): the characters met so far, each with a card — the figure with its emotions to try on (as the
    sprite gallery of «Бесконечное лето»), the full name, the caption and the biography by chapters. */
-.bio{display:grid;grid-template-columns:16cqw 1fr;gap:3cqw;align-items:start}
-.bio-list{display:flex;flex-direction:column;gap:.4cqh}
+/* the card fills the menu's body; only the text column scrolls (the organizer, 17.10), the figure and the list stay */
+.bio{display:grid;grid-template-columns:16cqw 1fr;gap:3cqw;align-items:start;height:calc(100cqh - 7cqh - 5cqh - 8.6cqh)}
+.bio-list{display:flex;flex-direction:column;gap:.4cqh;max-height:100%;overflow:auto}
 .bio-who{appearance:none;background:none;border:0;text-align:left;font-family:var(--f-display);font-size:3.1cqh;line-height:1.3;color:var(--muted);cursor:pointer;padding:.1em 0}
 .bio-who:hover,.bio-who:focus-visible{color:var(--fg);outline:none}
 .bio-who.on{color:var(--gold)}
-.bio-card{display:grid;grid-template-columns:22cqw 1fr;gap:2.6cqw;align-items:start}
+.bio-card{display:grid;grid-template-columns:22cqw 1fr;gap:2.6cqw;align-items:start;height:100%;min-height:0}
+.bio-text{height:100%;overflow:auto;padding-right:1.2cqw;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .bio-fig{position:relative;height:56cqh;border-radius:1cqh;overflow:hidden;background:radial-gradient(70% 60% at 50% 40%, #241812, #0d0908 95%);box-shadow:0 0 0 1px var(--line)}
 .bio-fig img{position:absolute;left:50%;top:0;height:100%;width:auto;max-width:none;transform:translateX(-50%);filter:saturate(.88) brightness(.95)}
 .bio-fig.flip img{transform:translateX(-50%) scaleX(-1)}
@@ -1073,7 +1076,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       + (looks.length > 1 ? looks.map((l) => '<button type="button" class="bio-emo' + (l === bioSel.look ? ' on' : '') + '" data-look="' + l + '">' + esc(LOOK_NAMES[l] || l) + '</button>').join('') + '<span style="flex-basis:100%"></span>' : '')
       + emos.map((e) => '<button type="button" class="bio-emo' + (e === bioSel.e ? ' on' : '') + '" data-emo="' + e + '">' + esc(EMO_NAMES[e] || e) + '</button>').join('')
       + '</div></div>'
-      + '<div><h3 class="bio-nm" style="--c:' + c.c + '">' + esc(c.n) + '</h3>'
+      + '<div class="bio-text"><h3 class="bio-nm" style="--c:' + c.c + '">' + esc(c.n) + '</h3>'
       + '<p class="bio-full">' + esc(b.full) + (role ? ' · ' + esc(role) : '') + '</p>'
       + (sections.length ? sections.map((sec) => '<h4 class="bio-ch">' + esc(sec.ch) + '</h4>' + sec.paras.map((p) => p.startsWith('# ') ? '<h5 class="bio-sub">' + esc(p.slice(2)) + '</h5>' : '<p class="bio-p">' + esc(p) + '</p>').join('')).join('') : '<p class="bio-none">Биография ещё не написана.</p>')
       + '</div></div></div>';
@@ -1520,6 +1523,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       gmBody.scrollTop = gmBody.scrollHeight;
       return;
     }
+    gmBody.classList.toggle('fixed', gmTab === 'bios');  // the card fills the body; only its text column scrolls
     if (gmTab === 'bios') { drawBios(); return; }
     if (gmTab === 'scenes') {  // jump straight to a scene instead of clicking through (17.10: was a drop-down at the top)
       const now = sceneNow();
