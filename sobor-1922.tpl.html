@@ -321,6 +321,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .bio-full{font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.06em;color:var(--muted);margin:.4em 0 2cqh}
 .bio-ch{font-family:var(--f-mono);font-size:1.9cqh;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin:2.4cqh 0 1cqh}
 .bio-p{font-size:2.7cqh;line-height:1.5;color:var(--narr);margin:0 0 1em;max-width:46cqw}
+.bio-sub{font-family:var(--f-display);font-weight:700;font-size:3cqh;color:var(--fg);margin:2cqh 0 .8cqh}
 .bio-none{font-size:2.7cqh;color:var(--narr);font-style:italic}
 .pg{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.1cqh;padding:.35em 1em;cursor:pointer}
 .pg:hover,.pg:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
@@ -1074,7 +1075,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       + '</div></div>'
       + '<div><h3 class="bio-nm" style="--c:' + c.c + '">' + esc(c.n) + '</h3>'
       + '<p class="bio-full">' + esc(b.full) + (role ? ' · ' + esc(role) : '') + '</p>'
-      + (sections.length ? sections.map((sec) => '<h4 class="bio-ch">' + esc(sec.ch) + '</h4>' + sec.paras.map((p) => '<p class="bio-p">' + esc(p) + '</p>').join('')).join('') : '<p class="bio-none">Биография ещё не написана.</p>')
+      + (sections.length ? sections.map((sec) => '<h4 class="bio-ch">' + esc(sec.ch) + '</h4>' + sec.paras.map((p) => p.startsWith('# ') ? '<h5 class="bio-sub">' + esc(p.slice(2)) + '</h5>' : '<p class="bio-p">' + esc(p) + '</p>').join('')).join('') : '<p class="bio-none">Биография ещё не написана.</p>')
       + '</div></div></div>';
   }
 

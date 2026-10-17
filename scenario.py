@@ -277,7 +277,8 @@ def load_chapter(folder):
 
 def load_bios(folder):
     """Character biographies (17.10): scenario/bio/<who>.txt — the first line is the full name, then sections
-    "== Название главы" with paragraphs (a blank line between them, "//" comments). { who: {full, sections: [{ch, paras}]} }.
+    "== Название главы" with paragraphs (a blank line between them, "//" comments; a line "# …" is a subheading inside the
+    section and is kept as a paragraph starting with "# "). { who: {full, sections: [{ch, paras}]} }.
     A character with a file gets a card in the game's «Персонажи»; the others (one-scene people, voices) do not."""
     bios = {}
     if not os.path.isdir(folder):
@@ -293,6 +294,9 @@ def load_bios(folder):
             if para and sections:
                 sections[-1]['paras'].append(' '.join(para))
             para.clear()
+        def sub(t):  # a subheading stands alone
+            flush()
+            sections[-1]['paras'].append(t)
         for line in lines:
             t = line.strip()
             if t.startswith('//'):
@@ -309,7 +313,10 @@ def load_bios(folder):
             else:
                 if not sections:
                     raise ScenarioError('%s: text before the first "== Глава" section' % name)
-                para.append(t)
+                if t.startswith('# '):
+                    sub(t)
+                else:
+                    para.append(t)
         flush()
         if not full:
             raise ScenarioError('%s: the first line must be the full name' % name)
