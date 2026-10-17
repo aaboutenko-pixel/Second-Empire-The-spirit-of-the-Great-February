@@ -58,7 +58,7 @@ GAME_VERSION = '1.0'
 SCENES_LOCKED = False
 # The chapter shelf's music (a file in music/ without .mp3): plays on the shelf for every chapter until a chapter brings
 # its own (5th field of `title`). Empty = silence after the title's march. The organizer sends the track (17.10).
-SHELF_MUSIC = ''
+SHELF_MUSIC = 'Пролог'
 CHAPTER = os.path.join(HERE, 'scenario', 'glava1')  # the chapter text, see scenario.py for the format
 SITE = os.path.join(HERE, 'site')
 # Aligning a set takes about a minute, so finished sprites are kept in .cache/sprites/<who>/<look>/<key>/ and reused
