@@ -820,13 +820,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       return urls.filter(Boolean);
     }
     return (from) => {
-      // the track of the step and the next two tracks the script will ask for
-      const tracks = [];
-      for (let i = Math.max(0, from); i < Math.min(steps.length, from + 400) && tracks.length < 3; i++) {
-        const m = i === from ? musicOf(i) : steps[i].music;
-        if (m && !tracks.includes(m)) tracks.push(m);
-      }
-      music.prefetch(tracks);
       const fresh = [];
       for (let i = Math.max(0, from); i < Math.min(steps.length, from + AHEAD); i++) {
         if (stepsDone.has(i)) continue;
@@ -856,19 +849,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     let live = 0, want = '', playing = '', unlocked = false, timer = 0, speed = 1;
     const target = () => (prefs.mute ? 0 : Math.pow(prefs.music / 10, 1.6));
     const info = (name) => MUSIC[name] || {};
-    // Tracks are fetched whole ahead of the reader (17.10: on a slow line a scene used to start in silence while its
-    // track streamed in) and then played from memory; one fetch at a time, so the track playing now keeps its bandwidth.
-    const blobs = {}, queue = [];
-    let fetching = false;
-    function pump() {
-      if (fetching || !queue.length) return;
-      const name = queue.shift();
-      if (blobs[name] || !MUSIC[name]) { pump(); return; }
-      fetching = true;
-      fetch(MUSIC[name].u).then((r) => (r.ok ? r.blob() : Promise.reject(r.status))).then((b) => { blobs[name] = URL.createObjectURL(b); })
-        .catch(() => {}).then(() => { fetching = false; pump(); });
-    }
-    function prefetch(names) { names.forEach((n) => { if (n && MUSIC[n] && !blobs[n] && !queue.includes(n)) queue.push(n); }); pump(); }
+    // Tracks stream from the network when their scene starts (as before 17.10). Fetching whole tracks ahead into memory
+    // was tried that evening and taken out the same evening: the organizer — «теперь ни хрена не грузит игра нормально».
     function step() {
       let busy = false;
       decks.forEach((a, n) => {
@@ -891,8 +873,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     // the live player starts `name` from the beginning of its music
     function start(name) {
       const a = decks[live], from = info(name).s || 0;
-      const src = blobs[name] || info(name).u;
-      if (a.dataset.track !== name || a.dataset.src !== src) { a.src = src; a.dataset.track = name; a.dataset.src = src; }
+      if (a.dataset.track !== name) { a.src = info(name).u; a.dataset.track = name; }
       const seek = () => { try { a.currentTime = from; } catch (e) { /* not seekable yet */ } };
       if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
       a.volume = canFade ? 0 : 1;
@@ -929,7 +910,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     return {
       set(name) { want = MUSIC[name] ? name : ''; sync(); },
       sync,
-      prefetch,
       unlocked: () => unlocked,
     };
   })();
@@ -1462,7 +1442,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       .concat(bioOpen.size ? [{ t: 'Персонажи', on: () => openGM('bios') }] : [])  // its own screen, once someone has been met (17.10)
       .concat([{ t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
     CHAPTERS.forEach((ch) => { if (ch.cover) { const im = new Image(); im.src = ch.cover; } });  // the cover is ready before the shelf opens
-    music.prefetch([SHELF_MUSIC, musicOf(0)]);
     const tm = $('tm');
     if (!music.unlocked()) {
       tm.innerHTML = '<div class="tm-gate"><span>Нажмите, чтобы войти</span></div>';
