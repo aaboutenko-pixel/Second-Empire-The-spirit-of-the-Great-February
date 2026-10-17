@@ -47,6 +47,7 @@ SPRITES_DIR = os.path.join(HERE, '..', 'sprites')
 BACKGROUNDS_DIR = os.path.join(HERE, '..', 'backgrounds')
 LOGO = os.path.join(HERE, '..', 'logo', 'logo.png')  # the game's logo for the title card, cut off its white backdrop
 CG_DIR = os.path.join(HERE, '..', 'cg')  # full-screen illustrations, id = file name = @cg in the script
+CHAPTERS_DIR = os.path.join(HERE, '..', 'chapters')  # chapter covers for the shelf, id = file name = 4th field of `title`
 MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without .mp3 = @music in the script
 # The version the players see, in the bottom right corner of the menus. Ours to change on releases worth naming, not
 # on every publish (the artifact counts those): 1.0 is chapter I as released (15.10), 1.1, 1.2 for its fixes, 2.0
@@ -398,19 +399,22 @@ def main():
     steps, state = scenario.load_chapter(CHAPTER)
     used_bg = {s['bg'] for s in steps if s.get('bg')} | {'main_menu'}
     used_cg = {s['cg'] for s in steps if s.get('cg')}
-    used_music = {s['music'] for s in steps if s.get('music')} | {state['title']['music']}
+    used_music = {s['music'] for s in steps if s.get('music')} | {state['title']['music'], state['title']['theme']} - {''}
     sprites, backgrounds, cgs = load_sprites(), load_backgrounds(only=used_bg), load_backgrounds(CG_DIR, 'illustration', 'cg', only=used_cg)
     music = load_music(only=used_music)
+    covers = load_backgrounds(CHAPTERS_DIR, 'cover', 'chapters')
+    if state['title']['cover'] and state['title']['cover'] not in covers:
+        print('cover missing (blank card): chapters/%s.png' % state['title']['cover'])
     with open(os.path.join(HERE, 'sobor-1922.tpl.html'), encoding='utf-8') as f:
         html = f.read()
-    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'"):
+    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'", "'__COVERS__'"):
         if html.count(key) != 1:
             raise SystemExit('template must contain the ' + key + ' placeholder exactly once')
     script = load_script(html, backgrounds, sprites, cgs, music)
     html = (html.replace("'__SPRITES__'", json.dumps(sprites)).replace("'__BACKGROUNDS__'", json.dumps(backgrounds))
             .replace("'__CGS__'", json.dumps(cgs)).replace("'__MUSIC__'", json.dumps(music, ensure_ascii=False)).replace("'__SCRIPT__'", json.dumps(script, ensure_ascii=False))
             .replace("'__VERSION__'", json.dumps('версия ' + GAME_VERSION, ensure_ascii=False))
-            .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED))
+            .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED)).replace("'__COVERS__'", json.dumps(covers))
             .replace("'__LOGO__'", json.dumps(load_logo())))
     with open(os.path.join(SITE, 'sobor-1922.html'), 'w', encoding='utf-8') as f:
         f.write(html)

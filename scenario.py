@@ -125,7 +125,9 @@ def parse(text, fname='', state=None):
             continue
         if line.startswith('title '):
             parts = [p.strip() for p in line[6:].split('|')]
-            state['title'] = {'name': parts[0], 'span': parts[1] if len(parts) > 1 else '', 'music': parts[2] if len(parts) > 2 else ''}
+            # name | years | title music | cover (chapters/<cover>.png, the chapter shelf) | theme (plays on the shelf)
+            state['title'] = {'name': parts[0], 'span': parts[1] if len(parts) > 1 else '', 'music': parts[2] if len(parts) > 2 else '',
+                              'cover': parts[3] if len(parts) > 3 else '', 'theme': parts[4] if len(parts) > 4 else ''}
         elif line.startswith('=='):
             parts = [p.strip() for p in line[2:].split('|')]
             if len(parts) != 3:

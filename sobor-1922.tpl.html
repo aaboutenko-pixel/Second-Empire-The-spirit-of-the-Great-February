@@ -162,6 +162,37 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .cr-txt .cr-pl::before{content:"";display:block;width:12cqh;height:1px;margin:0 auto 3.4cqh;background:var(--gold);opacity:.55}
 .cr-logo{margin:8cqh 0 0}
 .cr-logo img{display:block;width:40cqw;height:auto;filter:drop-shadow(0 .5cqh 1.4cqh rgba(0,0,0,.7))}
+/* The loading curtain (17.10): «Начать» on the title does not throw the reader into the game at once — the march fades,
+   the curtain falls with a thin line filling up, then the chapter shelf opens. */
+.curtain-load{position:absolute;left:50%;bottom:14cqh;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:1.8cqh;font-family:var(--f-mono);font-size:2cqh;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+.curtain-load.show{display:flex}
+.curtain-load i{display:block;width:26cqw;height:2px;background:var(--line);position:relative;overflow:hidden}
+.curtain-load i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold);animation:load-fill 1.5s ease-in-out forwards}
+@keyframes load-fill{to{width:100%}}
+/* The chapter shelf (17.10, the organizer's sketch): one wide cover in the middle, arrows at the sides, the years and
+   the progress under it, the buttons at the bottom. A cover is a finished picture with its own lettering — every chapter
+   in its own style, as in the Henry Stickmin Collection — so nothing is drawn over it. Each chapter can bring its own
+   music for the shelf (5th field of `title`); the title's march fades out on the way here. */
+.sh{position:absolute;inset:0;z-index:8;display:none;background:radial-gradient(90cqw 80cqh at 50% 35%, #1b120e, #070505 85%)}
+.stage.shelf .sh{display:block}
+.sh-h{position:absolute;left:0;right:0;top:4.6cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.36em;text-transform:uppercase;color:var(--muted)}
+.sh-card{position:absolute;left:50%;top:11.5cqh;width:60cqw;aspect-ratio:16/9;transform:translateX(-50%);border-radius:1.2cqh;overflow:hidden;background:#120c0a;box-shadow:0 2cqh 6cqh rgba(0,0,0,.85),0 0 0 1px rgba(207,168,80,.4);cursor:pointer;animation:sh-in .5s ease-out both}
+.sh-card img{display:block;width:100%;height:100%;object-fit:cover}
+.sh-card.locked img{filter:grayscale(.8) brightness(.45)}
+@keyframes sh-in{from{opacity:0;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.sh-arrow{position:absolute;top:11.5cqh;height:60cqh;width:14cqw;display:grid;place-items:center;appearance:none;background:none;border:0;color:var(--bone);font-family:var(--f-display);font-size:11cqh;line-height:1;cursor:pointer;opacity:.7}
+.sh-arrow.l{left:1cqw}.sh-arrow.r{right:1cqw}
+.sh-arrow:disabled{opacity:.12;cursor:default}
+.sh-arrow:hover:not(:disabled),.sh-arrow:focus-visible{opacity:1;outline:none}
+.sh-info{position:absolute;left:0;right:0;top:74.5cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;color:var(--muted)}
+.sh-info b{font-weight:500;color:var(--fg)}
+.sh-nav{position:absolute;left:0;right:0;bottom:6cqh;display:flex;justify-content:center;gap:2.4cqw}
+.sh-btn{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--fg);font-family:var(--f-display);font-size:3.4cqh;line-height:1.2;padding:.35em 1.3em;cursor:pointer}
+.sh-btn:hover,.sh-btn:focus-visible{border-color:var(--gold);color:var(--gold);outline:none}
+.sh-btn.ghost{color:var(--muted)}
+.sh-back{position:absolute;left:3cqw;bottom:7cqh;appearance:none;background:none;border:0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.1em;color:var(--muted);cursor:pointer}
+.sh-back:hover,.sh-back:focus-visible{color:var(--fg);outline:none}
+
 /* Main menu (15.10): the organizer's cabinet backdrop in full, drifting slowly, dust in the air. The logo top left
    with a soft shadow, the buttons bottom right over the dark folder, the version in the corner.
    Two soft shadows in those corners keep the type readable; the cap, the order and the tower stay in the light.
@@ -304,7 +335,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   </div>
   <div class="veil"></div>
   <div class="flash" id="flash"></div>
-  <div class="curtain" id="curtain" aria-live="polite"><p class="curtain-t" id="curtainText"></p></div>
+  <div class="curtain" id="curtain" aria-live="polite"><p class="curtain-t" id="curtainText"></p><div class="curtain-load" id="curtainLoad"><span>Загрузка</span><i></i></div></div>
+  <div class="sh" id="sh" aria-label="Выбор главы"></div>
   <div class="roll" id="roll" aria-label="Титры"></div>
 
   <div class="scrim"></div>
@@ -349,6 +381,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const BACKGROUNDS = '__BACKGROUNDS__';
   // Full-screen illustrations: files cg/<name>.webp|png|jpg, as { name: url }; "@cg name" in the script.
   const CGS = '__CGS__';
+  // Chapter covers for the shelf: chapters/<name>.png, as { name: url }; the 4th field of the `title` line names one.
+  const COVERS = '__COVERS__';
   // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
   // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
   const MUSIC = '__MUSIC__';
@@ -1120,6 +1154,65 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   }
   const scriptButtons = (list) => list.map((b, n) => ({ t: b.t, ghost: n > 0, on: () => jumpTo(b.go) }));
 
+  // ---------- the chapter shelf ----------
+  // One chapter so far; the list is ready for more: each entry is a `title` line (name, years, cover, theme).
+  const CHAPTERS = [{ id: SCRIPT.title.cover || 'prolog', t: SCRIPT.title, cover: COVERS[SCRIPT.title.cover] || '' }];
+  let shelfOpen = false, shelfAt = 0;
+  const sh = $('sh');
+  // how far the autosave is: the number of the scene it is in, 1-based
+  const sceneNumber = (i) => SCRIPT.scenes.filter((sc) => at(sc.id) <= i).length;
+  // «Начать» on the title: the music goes, a loading curtain, then the shelf (the organizer, 17.10: not «моментально»,
+  // the march must not cut straight into another tune)
+  function openShelf() {
+    music.set('');
+    clearTimeout(curtainTimer);
+    curtainText.classList.remove('show');
+    $('curtainLoad').classList.add('show');
+    curtain.classList.add('on');
+    curtainTimer = setTimeout(() => {
+      shelfOpen = true; shelfAt = 0; render();
+      curtainTimer = setTimeout(() => { $('curtainLoad').classList.remove('show'); curtain.classList.remove('on'); }, 1500);
+    }, 480);
+  }
+  function shelfMove(d) {
+    const to = Math.max(0, Math.min(CHAPTERS.length - 1, shelfAt + d));
+    if (to !== shelfAt) { shelfAt = to; shelfScreen(); }
+  }
+  function startChapter(then) { shelfOpen = false; stopAll(); then(); }
+  function shelfScreen() {
+    setBg(-1); setCg(-1); setCast(-1, null); fx.set('none');
+    stage.classList.add('shelf');
+    stage.classList.remove('title', 'dim', 'cards', 'decide');
+    $('tm').hidden = true; menu.hidden = true; menu.innerHTML = ''; layer.hidden = true; layer.innerHTML = ''; box.innerHTML = '';
+    const ch = CHAPTERS[shelfAt], last = store.get('auto', null), done = !!store.get('done', {})[ch.id];
+    music.set(ch.t.theme || '');
+    const status = done ? 'пройдено' : last ? 'читается · сцена ' + sceneNumber(last.cur) + ' из ' + SCRIPT.scenes.length : 'не начато';
+    const btns = [];
+    if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last))) });
+    btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => withCurtain(steps[0].p, () => jumpTo('restart'))) });
+    if (done) btns.push({ t: 'Титры', ghost: true, on: () => startChapter(() => { const i = steps.findIndex((s) => s.k === 'credits'); if (i >= 0) withCurtain('', () => goNow(i)); }) });
+    sh.innerHTML = '<h2 class="sh-h">Главы</h2>'
+      + '<button class="sh-arrow l" type="button" aria-label="Предыдущая глава"' + (shelfAt > 0 ? '' : ' disabled') + '>‹</button>'
+      + '<div class="sh-card" role="button" tabindex="0" aria-label="' + esc(ch.t.name) + '">' + (ch.cover ? '<img src="' + ch.cover + '" alt="">' : '') + '</div>'
+      + '<button class="sh-arrow r" type="button" aria-label="Следующая глава"' + (shelfAt < CHAPTERS.length - 1 ? '' : ' disabled') + '>›</button>'
+      + '<p class="sh-info"><b>' + esc(ch.t.span) + '</b> · ' + esc(status) + '</p>'
+      + '<nav class="sh-nav">' + btns.map((b, n) => '<button class="sh-btn' + (b.ghost ? ' ghost' : '') + '" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
+      + '<button class="sh-back" type="button">← На титул</button>';
+    sh.querySelectorAll('.sh-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); btns[+el.dataset.n].on(); }));
+    sh.querySelector('.sh-card').addEventListener('click', (e) => { e.stopPropagation(); btns[0].on(); });
+    sh.querySelector('.sh-arrow.l').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(-1); });
+    sh.querySelector('.sh-arrow.r').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(1); });
+    sh.querySelector('.sh-back').addEventListener('click', (e) => { e.stopPropagation(); shelfOpen = false; render(); });
+  }
+  // a swipe across the shelf turns the page
+  let swipeX = null;
+  sh.addEventListener('touchstart', (e) => { swipeX = e.touches[0].clientX; }, { passive: true });
+  sh.addEventListener('touchend', (e) => {
+    if (swipeX === null) return;
+    const dx = e.changedTouches[0].clientX - swipeX; swipeX = null;
+    if (Math.abs(dx) > 40) shelfMove(dx < 0 ? 1 : -1);
+  }, { passive: true });
+
   function titleScreen() {
     setBg(-1);
     setCg(-1);
@@ -1127,7 +1220,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     fx.set('motes');
     music.set(musicOf(-1));
     stage.classList.add('title');
-    stage.classList.remove('dim', 'cards', 'decide');
+    stage.classList.remove('dim', 'cards', 'decide', 'shelf');
     menu.hidden = true; menu.innerHTML = '';
     layer.hidden = true; layer.innerHTML = '';
     box.innerHTML = '';
@@ -1135,7 +1228,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (last && last.cur < steps.length) warm(last.cur);
     warm(0);
     const items = (last ? [{ t: 'Продолжить', on: () => { goFull(); withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last)); } }] : [])
-      .concat([{ t: 'Начать', on: () => { goFull(); withCurtain(steps[0].p, () => jumpTo('restart')); } }, { t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
+      .concat([{ t: 'Начать', on: () => { goFull(); openShelf(); } }, { t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
+    CHAPTERS.forEach((ch) => { if (ch.cover) { const im = new Image(); im.src = ch.cover; } });  // the cover is ready before the shelf opens
     const tm = $('tm');
     if (!music.unlocked()) {
       tm.innerHTML = '<div class="tm-gate"><span>Нажмите, чтобы войти</span></div>';
@@ -1168,9 +1262,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function render() {
     const fromBehind = atEnd;  // came back from the next step: a line in parts opens at its last part
     atEnd = false;
-    if (cur < 0) { leaveRoll(); titleScreen(); return; }
+    if (cur < 0) { leaveRoll(); if (shelfOpen) shelfScreen(); else titleScreen(); return; }
     const s = steps[cur];
-    stage.classList.remove('title');
+    stage.classList.remove('title', 'shelf');
     $('tm').hidden = true;
     if (s.k === 'credits') { rollCredits(s); return; }  // not autosaved: «Продолжить» opens on the end card, not inside the roll
     leaveRoll();
@@ -1284,6 +1378,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     // the game is played through: the autosave goes, so the title offers only «Начать» (the organizer, 16.10: «Продолжить»
     // after the credits would only lead back into the credits)
     store.drop('auto');
+    const done = store.get('done', {}); done[CHAPTERS[0].id] = true; store.set('done', done);  // the shelf shows «пройдено»
     music.set(musicOf(cur));
     rowN = 0;
     roll.innerHTML = '<ul class="roll-list">' + (s.title ? '<li class="cr-title">' + esc(s.title) + '</li>' : '') + s.rows.map(rowHTML).join('')
@@ -1408,7 +1503,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // ---------- mouse and keys ----------
   stage.addEventListener('click', (e) => {
     if (stage.classList.contains('clean')) { stage.classList.remove('clean'); if (mode.auto) scheduleAuto(); return; }
-    if (e.target.closest('button, a, select, .layer, .gm, .qm')) return;
+    if (e.target.closest('button, a, select, .layer, .gm, .qm, .sh')) return;
     advance();
   });
   // A click on a card is the card's alone: advancing replaces the card, and the stage's handler below would no longer
@@ -1426,9 +1521,15 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   }, { passive: true });
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-    if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); return; }
+    if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); else if (shelfOpen) { shelfOpen = false; render(); } return; }
     if (!gm.hidden) return;
     if (stage.classList.contains('clean')) { e.preventDefault(); stage.classList.remove('clean'); return; }
+    if (cur < 0 && shelfOpen) {
+      if (e.key === 'ArrowLeft') shelfMove(-1); else if (e.key === 'ArrowRight') shelfMove(1);
+      else if ((e.key === ' ' || e.key === 'Enter') && !(e.target.closest && e.target.closest('button'))) { const b = sh.querySelector('.sh-btn'); if (b) b.click(); }
+      else return;
+      e.preventDefault(); return;
+    }
     if (cur < 0) { if ((e.key === ' ' || e.key === 'Enter') && $('tm').querySelector('.tm-gate')) { e.preventDefault(); goFull(); titleScreen(); } return; }
     const onControl = e.target.closest && e.target.closest('button, a');
     const key = e.key.toLowerCase();
