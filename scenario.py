@@ -275,6 +275,48 @@ def load_chapter(folder):
     return steps, state
 
 
+def load_bios(folder):
+    """Character biographies (17.10): scenario/bio/<who>.txt — the first line is the full name, then sections
+    "== Название главы" with paragraphs (a blank line between them, "//" comments). { who: {full, sections: [{ch, paras}]} }.
+    A character with a file gets a card in the game's «Персонажи»; the others (one-scene people, voices) do not."""
+    bios = {}
+    if not os.path.isdir(folder):
+        return bios
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith('.txt'):
+            continue
+        who = name[:-4]
+        with open(os.path.join(folder, name), encoding='utf-8') as f:
+            lines = [l.rstrip() for l in f.read().splitlines()]
+        full, sections, para = '', [], []
+        def flush():
+            if para and sections:
+                sections[-1]['paras'].append(' '.join(para))
+            para.clear()
+        for line in lines:
+            t = line.strip()
+            if t.startswith('//'):
+                continue
+            if not full:
+                if t:
+                    full = t
+                continue
+            if t.startswith('=='):
+                flush()
+                sections.append({'ch': t[2:].strip(), 'paras': []})
+            elif not t:
+                flush()
+            else:
+                if not sections:
+                    raise ScenarioError('%s: text before the first "== Глава" section' % name)
+                para.append(t)
+        flush()
+        if not full:
+            raise ScenarioError('%s: the first line must be the full name' % name)
+        bios[who] = {'full': full, 'sections': sections}
+    return bios
+
+
 def check(steps, characters, backgrounds):
     """Problems a reader would hit: unknown speakers, broken jumps. Returns a list of strings."""
     problems = []

@@ -302,6 +302,26 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .sc:hover,.sc:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .sc.on{color:var(--gold);border-color:var(--gold)}
 .sc.off{opacity:.45;cursor:default;letter-spacing:.2em}
+/* «Персонажи» (17.10): the characters met so far, each with a card — the figure with its emotions to try on (as the
+   sprite gallery of «Бесконечное лето»), the full name, the caption and the biography by chapters. */
+.bio{display:grid;grid-template-columns:16cqw 1fr;gap:3cqw;align-items:start}
+.bio-list{display:flex;flex-direction:column;gap:.4cqh}
+.bio-who{appearance:none;background:none;border:0;text-align:left;font-family:var(--f-display);font-size:3.1cqh;line-height:1.3;color:var(--muted);cursor:pointer;padding:.1em 0}
+.bio-who:hover,.bio-who:focus-visible{color:var(--fg);outline:none}
+.bio-who.on{color:var(--gold)}
+.bio-card{display:grid;grid-template-columns:22cqw 1fr;gap:2.6cqw;align-items:start}
+.bio-fig{position:relative;height:56cqh;border-radius:1cqh;overflow:hidden;background:radial-gradient(70% 60% at 50% 40%, #241812, #0d0908 95%);box-shadow:0 0 0 1px var(--line)}
+.bio-fig img{position:absolute;left:50%;top:0;height:100%;width:auto;max-width:none;transform:translateX(-50%);filter:saturate(.88) brightness(.95)}
+.bio-fig.flip img{transform:translateX(-50%) scaleX(-1)}
+.bio-emos{display:flex;flex-wrap:wrap;gap:.7cqh .5cqw;margin-top:1.2cqh}
+.bio-emo{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:1.8cqh;padding:.3em .8em;cursor:pointer}
+.bio-emo:hover,.bio-emo:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
+.bio-emo.on{color:var(--gold);border-color:var(--gold)}
+.bio-nm{font-family:var(--f-display);font-weight:700;font-size:4.6cqh;letter-spacing:.06em;color:var(--c,var(--gold));margin:0}
+.bio-full{font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.06em;color:var(--muted);margin:.4em 0 2cqh}
+.bio-ch{font-family:var(--f-mono);font-size:1.9cqh;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin:2.4cqh 0 1cqh}
+.bio-p{font-size:2.7cqh;line-height:1.5;color:var(--narr);margin:0 0 1em;max-width:46cqw}
+.bio-none{font-size:2.7cqh;color:var(--narr);font-style:italic}
 .pg{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-family:var(--f-mono);font-size:2.1cqh;padding:.35em 1em;cursor:pointer}
 .pg:hover,.pg:focus-visible{color:var(--fg);border-color:var(--muted);outline:none}
 .pref{display:grid;grid-template-columns:26cqw 1fr;align-items:center;gap:2cqw;max-width:62cqw;margin:0 0 3cqh;font-size:3cqh}
@@ -364,6 +384,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       <button type="button" data-gm="close">Вернуться</button>
       <button type="button" data-gm="history">История</button>
       <button type="button" data-gm="scenes">Сцены</button>
+      <button type="button" data-gm="bios">Персонажи</button>
       <button type="button" data-gm="prefs">Настройки</button>
       <button type="button" data-gm="title">Главное меню</button>
     </nav>
@@ -389,6 +410,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const COVERS = '__COVERS__';
   // The shelf's own music (SHELF_MUSIC in build.py), for chapters without a theme of their own.
   const SHELF_MUSIC = '__SHELF_MUSIC__';
+  // Character biographies (scenario/bio/<who>.txt, 17.10): { who: { full, sections: [{ ch, paras }] } }. A card opens
+  // the first time the character stands on the stage; its chapters open as the reader reaches them.
+  const BIOS = '__BIOS__';
   // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
   // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
   const MUSIC = '__MUSIC__';
@@ -1002,11 +1026,55 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   }
 
   let toastTimer = null;
-  function toast(text) {
+  function toast(text, ms) {
     const el = $('toast');
     el.textContent = text; el.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
+    toastTimer = setTimeout(() => { el.hidden = true; }, ms || 1800);
+  }
+
+  // ---------- biographies ----------
+  // A character's card opens the first time he stands on the stage (or speaks): a toast says so, the set is kept
+  // in the storage. The menu tab «Персонажи» lists the opened cards.
+  const bioOpen = new Set(store.get('bios', []));
+  function openBios(i) {
+    const s = steps[i], who = stageOf(i).concat(s.k === 'say' && s.w ? [s.w] : []);
+    who.forEach((w) => {
+      if (!BIOS[w] || bioOpen.has(w)) return;
+      bioOpen.add(w); store.set('bios', [...bioOpen]);
+      if (!mode.skip) toast('Открыта биография: ' + CH[w].n, 2600);
+    });
+  }
+  // the card: which character, look and emotion are shown
+  const bioSel = { who: null, look: null, e: 'original' };
+  const EMO_NAMES = { original: 'обычный', happy: 'рад', sad: 'грустит', angry: 'злится', shocked: 'поражён', thinking: 'думает', unhappy: 'недоволен', embarassed: 'смущён', embarrassed: 'смущён', emberassed: 'смущён', embarrased: 'смущён' };
+  const LOOK_NAMES = { lunenko: 'в мундире', lunenko_povstanets: 'подпольщик' };
+  function drawBios() {
+    const list = Object.keys(CH).filter((w) => bioOpen.has(w) && BIOS[w]);
+    if (!list.length) { gmBody.innerHTML = '<h2 class="gm-h">Персонажи</h2><p class="bio-none">Пока никого не встретили.</p>'; return; }
+    if (!bioSel.who || !list.includes(bioSel.who)) { bioSel.who = list[0]; bioSel.look = null; bioSel.e = 'original'; }
+    const who = bioSel.who, c = CH[who], b = BIOS[who];
+    const sets = SPRITES[who] || {};
+    const looks = Object.keys(c.looks || {}).filter((l) => sets[l]);
+    if (!bioSel.look || !sets[bioSel.look]) bioSel.look = looks[0] || null;
+    const sprite = bioSel.look ? sets[bioSel.look] : null;
+    const emos = sprite ? Object.keys(sprite.emotions) : [];
+    if (sprite && !sprite.emotions[bioSel.e]) bioSel.e = emos.includes('original') ? 'original' : emos[0];
+    const reached = new Set([SCRIPT.title.name]);  // chapters the reader has: this one (more when there are more)
+    const sections = b.sections.filter((sec) => reached.has(sec.ch));
+    const role = cur >= 0 ? roleOf(cur, who) : (c.looks ? (c.looks[looks[0]] || {}).r || '' : c.r || '');
+    gmBody.innerHTML = '<h2 class="gm-h">Персонажи</h2><div class="bio">'
+      + '<nav class="bio-list">' + list.map((w) => '<button type="button" class="bio-who' + (w === who ? ' on' : '') + '" data-bio="' + w + '">' + esc(CH[w].n) + '</button>').join('') + '</nav>'
+      + '<div class="bio-card"><div>'
+      + '<div class="bio-fig">' + (sprite ? '<img alt="" src="' + sprite.emotions[bioSel.e] + '">' : '') + '</div>'
+      + '<div class="bio-emos">'
+      + (looks.length > 1 ? looks.map((l) => '<button type="button" class="bio-emo' + (l === bioSel.look ? ' on' : '') + '" data-look="' + l + '">' + esc(LOOK_NAMES[l] || l) + '</button>').join('') + '<span style="flex-basis:100%"></span>' : '')
+      + emos.map((e) => '<button type="button" class="bio-emo' + (e === bioSel.e ? ' on' : '') + '" data-emo="' + e + '">' + esc(EMO_NAMES[e] || e) + '</button>').join('')
+      + '</div></div>'
+      + '<div><h3 class="bio-nm" style="--c:' + c.c + '">' + esc(c.n) + '</h3>'
+      + '<p class="bio-full">' + esc(b.full) + (role ? ' · ' + esc(role) : '') + '</p>'
+      + (sections.length ? sections.map((sec) => '<h4 class="bio-ch">' + esc(sec.ch) + '</h4>' + sec.paras.map((p) => '<p class="bio-p">' + esc(p) + '</p>').join('')).join('') : '<p class="bio-none">Биография ещё не написана.</p>')
+      + '</div></div></div>';
   }
 
   // a card tilts left or right by the parity of its position, so a run of cards looks like a pile
@@ -1282,6 +1350,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (s.k === 'credits') { rollCredits(s); return; }  // not autosaved: «Продолжить» opens on the end card, not inside the roll
     leaveRoll();
     markSeen(cur);
+    openBios(cur);
     store.set('auto', snapshot());
     music.set(musicOf(cur));
     if (forward && !mode.skip) playOnce(s);
@@ -1435,7 +1504,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function drawGM() {
     gm.querySelectorAll('[data-gm]').forEach((b) => {
       b.classList.toggle('on', b.dataset.gm === gmTab);
-      b.hidden = cur < 0 && ['history', 'scenes', 'title'].includes(b.dataset.gm);  // on the title itself these make no sense
+      b.hidden = (cur < 0 && ['history', 'scenes', 'title'].includes(b.dataset.gm))  // on the title itself these make no sense
+        || (b.dataset.gm === 'bios' && !bioOpen.size);  // nobody met yet
     });
     if (gmTab === 'history') {
       const rows = hist.concat([cur]).filter((i) => i >= 0).map((i) => {
@@ -1448,6 +1518,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       gmBody.scrollTop = gmBody.scrollHeight;
       return;
     }
+    if (gmTab === 'bios') { drawBios(); return; }
     if (gmTab === 'scenes') {  // jump straight to a scene instead of clicking through (17.10: was a drop-down at the top)
       const now = sceneNow();
       // reached = its first step has been read (the `seen` marks); the current scene always counts
@@ -1476,6 +1547,10 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       if (t === 'close') closeGM(); else if (t === 'title') { if (cur < 0) closeGM(); else toTitle(); } else { gmTab = t; drawGM(); }
       return;
     }
+    const bw = e.target.closest('[data-bio]'), bl = e.target.closest('[data-look]'), be = e.target.closest('[data-emo]');
+    if (bw) { bioSel.who = bw.dataset.bio; bioSel.look = null; bioSel.e = 'original'; drawBios(); return; }
+    if (bl) { bioSel.look = bl.dataset.look; drawBios(); return; }
+    if (be) { bioSel.e = be.dataset.emo; drawBios(); return; }
     const sc = e.target.closest('[data-scene]');
     if (sc) { closeGM(); stopAll(); const i = at(sc.dataset.scene); loadThen(() => go(i)); stage.focus(); return; }  // a jump through the loading curtain too
     const act = e.target.closest('[data-act="fullscreen"]');

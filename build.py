@@ -48,6 +48,7 @@ BACKGROUNDS_DIR = os.path.join(HERE, '..', 'backgrounds')
 LOGO = os.path.join(HERE, '..', 'logo', 'logo.png')  # the game's logo for the title card, cut off its white backdrop
 CG_DIR = os.path.join(HERE, '..', 'cg')  # full-screen illustrations, id = file name = @cg in the script
 CHAPTERS_DIR = os.path.join(HERE, '..', 'chapters')  # chapter covers for the shelf, id = file name = 4th field of `title`
+BIOS_DIR = os.path.join(HERE, 'scenario', 'bio')  # character biographies, <who>.txt (scenario.load_bios)
 MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without .mp3 = @music in the script
 # The version the players see, in the bottom right corner of the menus. Ours to change on releases worth naming, not
 # on every publish (the artifact counts those): 1.0 is chapter I as released (15.10), 1.1, 1.2 for its fixes, 2.0
@@ -410,14 +411,20 @@ def main():
         print('cover missing (blank card): chapters/%s.png' % state['title']['cover'])
     with open(os.path.join(HERE, 'sobor-1922.tpl.html'), encoding='utf-8') as f:
         html = f.read()
-    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'", "'__COVERS__'", "'__SHELF_MUSIC__'"):
+    bios = scenario.load_bios(BIOS_DIR)
+    characters = set(re.findall(r'^\s{4}([a-z_]+):\s*\{\s*n:', html, re.M))
+    for who in sorted(bios):
+        if who not in characters:
+            raise SystemExit('bio for unknown character: scenario/bio/%s.txt' % who)
+    print('bios', ', '.join(sorted(bios)) or '(none)')
+    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'", "'__COVERS__'", "'__SHELF_MUSIC__'", "'__BIOS__'"):
         if html.count(key) != 1:
             raise SystemExit('template must contain the ' + key + ' placeholder exactly once')
     script = load_script(html, backgrounds, sprites, cgs, music)
     html = (html.replace("'__SPRITES__'", json.dumps(sprites)).replace("'__BACKGROUNDS__'", json.dumps(backgrounds))
             .replace("'__CGS__'", json.dumps(cgs)).replace("'__MUSIC__'", json.dumps(music, ensure_ascii=False)).replace("'__SCRIPT__'", json.dumps(script, ensure_ascii=False))
             .replace("'__VERSION__'", json.dumps('версия ' + GAME_VERSION, ensure_ascii=False))
-            .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED)).replace("'__COVERS__'", json.dumps(covers)).replace("'__SHELF_MUSIC__'", json.dumps(SHELF_MUSIC, ensure_ascii=False))
+            .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED)).replace("'__COVERS__'", json.dumps(covers)).replace("'__SHELF_MUSIC__'", json.dumps(SHELF_MUSIC, ensure_ascii=False)).replace("'__BIOS__'", json.dumps(bios, ensure_ascii=False))
             .replace("'__LOGO__'", json.dumps(load_logo())))
     with open(os.path.join(SITE, 'sobor-1922.html'), 'w', encoding='utf-8') as f:
         f.write(html)
