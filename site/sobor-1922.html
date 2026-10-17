@@ -164,7 +164,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .cr-logo img{display:block;width:40cqw;height:auto;filter:drop-shadow(0 .5cqh 1.4cqh rgba(0,0,0,.7))}
 /* The loading curtain (17.10): «Начать» on the title does not throw the reader into the game at once — the march fades,
    the curtain falls with a thin line filling up, then the chapter shelf opens. */
-.curtain-load{position:absolute;left:50%;bottom:14cqh;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:1.8cqh;font-family:var(--f-mono);font-size:2cqh;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+/* the loading curtain carries the game's logo (the organizer, 17.10: «лого пускай везде будет»), the line under it */
+.curtain-load{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;flex-direction:column;align-items:center;gap:3.4cqh;font-family:var(--f-mono);font-size:2cqh;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+.curtain-load img{display:block;width:38cqw;height:auto;filter:drop-shadow(0 .5cqh 1.4cqh rgba(0,0,0,.7))}
 .curtain-load.show{display:flex}
 .curtain-load i{display:block;width:26cqw;height:2px;background:var(--line);position:relative;overflow:hidden}
 .curtain-load i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold);animation:load-fill .8s ease-in-out forwards}
@@ -338,7 +340,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   </div>
   <div class="veil"></div>
   <div class="flash" id="flash"></div>
-  <div class="curtain" id="curtain" aria-live="polite"><p class="curtain-t" id="curtainText"></p><div class="curtain-load" id="curtainLoad"><span>Загрузка</span><i></i></div></div>
+  <div class="curtain" id="curtain" aria-live="polite"><p class="curtain-t" id="curtainText"></p><div class="curtain-load" id="curtainLoad"><i></i></div></div>
   <div class="sh" id="sh" aria-label="Выбор главы"></div>
   <div class="roll" id="roll" aria-label="Титры"></div>
 
@@ -398,6 +400,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const LOCKED = false;
   // The game's logo (logo/logo.png, by the organizer, 15.10): the main menu shows it instead of the chapter name.
   const LOGO = "img/logo.webp?v=49a2897d";
+  document.getElementById('curtainLoad').insertAdjacentHTML('afterbegin', LOGO ? '<img src="' + LOGO + '" alt="Second Empire">' : '<span>Загрузка</span>');
   document.getElementById('ver').textContent = VERSION;
   // The chapter itself: build.py reads scenario/<chapter>/*.txt (format described in scenario.py) into
   // { title: {name, span}, scenes: [{id, label}], steps: [...] }.
@@ -1194,9 +1197,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     music.set(ch.t.theme || SHELF_MUSIC || '');
     const btns = [];
     if (ch.soon) { /* no buttons: there is nothing to start yet */ } else {
-    if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last))) });
-    btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => withCurtain(steps[0].p, () => jumpTo('restart'))) });
-    if (done) btns.push({ t: 'Титры', ghost: true, on: () => startChapter(() => { const i = steps.findIndex((s) => s.k === 'credits'); if (i >= 0) withCurtain('', () => goNow(i)); }) });
+    if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => loadThen(() => restore(last))) });
+    btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => loadThen(() => jumpTo('restart'))) });
+    if (done) btns.push({ t: 'Титры', ghost: true, on: () => startChapter(() => { const i = steps.findIndex((s) => s.k === 'credits'); if (i >= 0) loadThen(() => goNow(i)); }) });
     }
     const chevron = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     sh.innerHTML = '<h2 class="sh-h">Главы</h2>'
@@ -1237,7 +1240,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     const last = store.get('auto', null);
     if (last && last.cur < steps.length) warm(last.cur);
     warm(0);
-    const items = (last ? [{ t: 'Продолжить', on: () => { goFull(); withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last)); } }] : [])
+    const items = (last ? [{ t: 'Продолжить', on: () => { goFull(); loadThen(() => restore(last)); } }] : [])  // the loading curtain, as everywhere (17.10)
       .concat([{ t: 'Начать', on: () => { goFull(); openShelf(); } }, { t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
     CHAPTERS.forEach((ch) => { if (ch.cover) { const im = new Image(); im.src = ch.cover; } });  // the cover is ready before the shelf opens
     const tm = $('tm');
