@@ -850,8 +850,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function exitGame() {
     if (TG && TG.close) { TG.close(); return; }
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    stopAll(); closeGM();
-    loadThen(() => { toTitleNow(); window.close(); });
+    window.close();  // no loading curtain here (the organizer, 17.10); a tab the page did not open stays, on the title
   }
   const CPS = [10, 15, 20, 30, 40, 50, 65, 85, 120, Infinity]; // characters per second for the speed setting 1..10
   const seen = new Set(store.get('seen', []));
