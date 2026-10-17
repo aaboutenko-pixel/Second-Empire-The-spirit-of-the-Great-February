@@ -366,7 +366,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       <button type="button" data-gm="scenes">Сцены</button>
       <button type="button" data-gm="prefs">Настройки</button>
       <button type="button" data-gm="title">Главное меню</button>
-      <button type="button" data-gm="exit">Выйти из игры</button>
     </nav>
     <section class="gm-body" id="gmBody"></section>
   </div>
@@ -1437,7 +1436,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function drawGM() {
     gm.querySelectorAll('[data-gm]').forEach((b) => {
       b.classList.toggle('on', b.dataset.gm === gmTab);
-      b.hidden = cur < 0 && (b.dataset.gm === 'history' || b.dataset.gm === 'scenes');
+      b.hidden = cur < 0 && ['history', 'scenes', 'title'].includes(b.dataset.gm);  // on the title itself these make no sense
     });
     if (gmTab === 'history') {
       const rows = hist.concat([cur]).filter((i) => i >= 0).map((i) => {
@@ -1475,7 +1474,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     const nav = e.target.closest('[data-gm]');
     if (nav) {
       const t = nav.dataset.gm;
-      if (t === 'close') closeGM(); else if (t === 'title') toTitle(); else if (t === 'exit') exitGame(); else { gmTab = t; drawGM(); }
+      if (t === 'close') closeGM(); else if (t === 'title') { if (cur < 0) closeGM(); else toTitle(); } else { gmTab = t; drawGM(); }
       return;
     }
     const sc = e.target.closest('[data-scene]');
