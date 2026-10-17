@@ -306,8 +306,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 /* «Персонажи» (17.10): the characters met so far, each with a card — the figure with its emotions to try on (as the
    sprite gallery of «Бесконечное лето»), the full name, the caption and the biography by chapters. */
 /* the card fills the menu's body; only the text column scrolls (the organizer, 17.10), the figure and the list stay */
-.bio{display:grid;grid-template-columns:16cqw 1fr;gap:3cqw;align-items:start;height:calc(100cqh - 7cqh - 5cqh - 8.6cqh)}
-.bio-list{display:flex;flex-direction:column;gap:.4cqh;max-height:100%;overflow:auto}
+.bio{display:grid;grid-template-columns:16cqw 1fr;gap:3cqw;align-items:start;height:calc(100cqh - 7cqh - 5cqh)}
+.bio-h{margin:0 0 1.6cqh;line-height:1.1;font-size:4.6cqh;white-space:nowrap}
+.bio-list{display:flex;flex-direction:column;gap:.4cqh;max-height:100%;overflow:hidden auto}
 .bio-who{appearance:none;background:none;border:0;text-align:left;font-family:var(--f-display);font-size:3.1cqh;line-height:1.3;color:var(--muted);cursor:pointer;padding:.1em 0}
 .bio-who:hover,.bio-who:focus-visible{color:var(--fg);outline:none}
 .bio-who.on{color:var(--gold)}
@@ -1068,8 +1069,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     const reached = new Set([SCRIPT.title.name]);  // chapters the reader has: this one (more when there are more)
     const sections = b.sections.filter((sec) => reached.has(sec.ch));
     const role = cur >= 0 ? roleOf(cur, who) : (c.looks ? (c.looks[looks[0]] || {}).r || '' : c.r || '');
-    gmBody.innerHTML = '<h2 class="gm-h">Персонажи</h2><div class="bio">'
-      + '<nav class="bio-list">' + list.map((w) => '<button type="button" class="bio-who' + (w === who ? ' on' : '') + '" data-bio="' + w + '">' + esc(CH[w].n) + '</button>').join('') + '</nav>'
+    // the heading stands in the list column, level with the name on the card (the organizer, 17.10)
+    gmBody.innerHTML = '<div class="bio">'
+      + '<nav class="bio-list"><h2 class="gm-h bio-h">Персонажи</h2>' + list.map((w) => '<button type="button" class="bio-who' + (w === who ? ' on' : '') + '" data-bio="' + w + '">' + esc(CH[w].n) + '</button>').join('') + '</nav>'
       + '<div class="bio-card"><div>'
       + '<div class="bio-fig">' + (sprite ? '<img alt="" src="' + sprite.emotions[bioSel.e] + '">' : '') + '</div>'
       + '<div class="bio-emos">'
