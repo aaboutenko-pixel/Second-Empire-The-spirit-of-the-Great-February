@@ -276,6 +276,29 @@ def load_sfx():
     return out
 
 
+MUSIC_VBR = 0.4  # libsndfile/LAME VBR quality: about 130 kbps (the organizer's files are ~180–260 kbps; 17.10: lighter for slow lines)
+MUSIC_CACHE = os.path.join(HERE, '.cache', 'music')
+
+
+def encode_music(path):
+    """The track re-encoded as a lighter mp3 (VBR, MUSIC_VBR), cached by the source file's size and date."""
+    st = os.stat(path)
+    key = '%08x' % zlib.crc32(('%s|%d|%d|%s' % (os.path.basename(path), st.st_size, st.st_mtime_ns, MUSIC_VBR)).encode('utf-8'))
+    os.makedirs(MUSIC_CACHE, exist_ok=True)
+    cached = os.path.join(MUSIC_CACHE, key + '.mp3')
+    if os.path.isfile(cached):
+        with open(cached, 'rb') as f:
+            return f.read()
+    x, sr = soundfile.read(path, dtype='float32', always_2d=True)
+    buf = io.BytesIO()
+    with soundfile.SoundFile(buf, 'w', samplerate=sr, channels=x.shape[1], format='MP3', compression_level=MUSIC_VBR, bitrate_mode='VARIABLE') as f:
+        f.write(x)
+    data = buf.getvalue()
+    with open(cached, 'wb') as f:
+        f.write(data)
+    return data
+
+
 def load_music(only=None):
     """Copies the tracks next to the page as they are (no re-encoding); { name: {u: url, s: start, e: end} },
     name = file name, s/e = where the music begins and ends (loop_points). `only`: the names the script uses — the
@@ -290,9 +313,8 @@ def load_music(only=None):
         if only is not None and stem not in only:
             print('music', stem, 'not in the script: not shipped')
             continue
-        with open(os.path.join(MUSIC_DIR, name), 'rb') as f:
-            data = f.read()
-        url, size = write_site(data, 'audio/%s%s' % (latin(stem), ext.lower()))
+        data = encode_music(os.path.join(MUSIC_DIR, name))
+        url, size = write_site(data, 'audio/%s.mp3' % latin(stem))
         start, end = loop_points(os.path.join(MUSIC_DIR, name))
         music[stem] = {'u': url, 's': start, 'e': end}
         print('music', stem, size, 'bytes, music from %.1f to %.1f s' % (start, end))
