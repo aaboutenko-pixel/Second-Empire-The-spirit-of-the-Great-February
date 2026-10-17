@@ -429,6 +429,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const BIOS = '__BIOS__';
   // «Поделиться» / «Отзыв» on the title: { share: url or '', feedback: url } (SHARE_URL, FEEDBACK_URL in build.py).
   const LINKS = '__LINKS__';
+  // Sound effects: sfx/<name>.mp3 copied next to the page, as { name: url } ('@sfx name' in the script; paper, wire on the cards).
+  const SFX = '__SFX__';
   // Music: the organizer's files music/<name>.mp3, copied next to the page, as { name: {u: url, s: start, e: end} } —
   // s and e are where the music begins and ends in the file (build.py); "@music name" in the script.
   const MUSIC = '__MUSIC__';
@@ -707,16 +709,24 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // one-off effects of a step, played when the reader arrives at it going forward
   function playOnce(s) {
     if (CARD_HINT[s.k]) sfx.play(s.k === 'wire' ? 'wire' : 'paper');
-    if (!s.once) return;
-    if (s.once.includes('flash')) { sfx.play('crack'); if (!reduced) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); } }
-    if (s.once.includes('shake')) { sfx.play('boom'); if (!reduced) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 600); } }
+    if (s.sfx) sfx.play(s.sfx);  // '@sfx name' in the script: explosion, shot, hit…
+    if (!s.once || reduced) return;
+    if (s.once.includes('flash')) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+    if (s.once.includes('shake')) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 600); }
   }
 
   // ---------- sound effects (17.10) ----------
-  // Short sounds made on the spot with the Web Audio API — no files, no licences to check: the telegraph key for a
-  // wire, paper for a newspaper, a letter or a decree, a blast with @shake, a crack with @flash. Volume follows the
-  // music setting and its mute. (If the organizer ever wants recordings instead, they would go to sfx/<kind>.mp3.)
+  // Recordings from sfx/ (CC0, see sfx/SOURCES.txt): paper for a newspaper, a letter or a decree, the telegraph for a
+  // wire, and whatever '@sfx name' asks for. Volume follows the music setting and its mute. A kind without a file falls
+  // back to a sound made on the spot with the Web Audio API (the organizer found those «фигня», so files come first).
   const sfx = (() => {
+    const pool = {};
+    function playFile(kind, v) {
+      const a = pool[kind] || (pool[kind] = new Audio(SFX[kind]));
+      a.volume = v;
+      try { a.currentTime = 0; } catch (e) { /* not loaded yet */ }
+      a.play().catch(() => {});
+    }
     let ctx = null;
     const ac = () => {
       if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; } }
@@ -772,9 +782,11 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     };
     return {
       play(kind) {
-        if (!make[kind] || !music.unlocked() || prefs.mute) return;
+        if (!music.unlocked() || prefs.mute) return;
         const v = Math.min(1, prefs.music / 10) * 0.7;
         if (!v) return;
+        if (SFX[kind]) { playFile(kind, v); return; }
+        if (!make[kind]) return;
         const c = ac(); if (!c) return;
         const out = c.createGain(); out.gain.value = v; out.connect(c.destination);
         try { make[kind](c, out); } catch (e) { /* a sound that fails is no harm */ }
@@ -808,6 +820,13 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       return urls.filter(Boolean);
     }
     return (from) => {
+      // the track of the step and the next two tracks the script will ask for
+      const tracks = [];
+      for (let i = Math.max(0, from); i < Math.min(steps.length, from + 400) && tracks.length < 3; i++) {
+        const m = i === from ? musicOf(i) : steps[i].music;
+        if (m && !tracks.includes(m)) tracks.push(m);
+      }
+      music.prefetch(tracks);
       const fresh = [];
       for (let i = Math.max(0, from); i < Math.min(steps.length, from + AHEAD); i++) {
         if (stepsDone.has(i)) continue;
@@ -837,6 +856,19 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     let live = 0, want = '', playing = '', unlocked = false, timer = 0, speed = 1;
     const target = () => (prefs.mute ? 0 : Math.pow(prefs.music / 10, 1.6));
     const info = (name) => MUSIC[name] || {};
+    // Tracks are fetched whole ahead of the reader (17.10: on a slow line a scene used to start in silence while its
+    // track streamed in) and then played from memory; one fetch at a time, so the track playing now keeps its bandwidth.
+    const blobs = {}, queue = [];
+    let fetching = false;
+    function pump() {
+      if (fetching || !queue.length) return;
+      const name = queue.shift();
+      if (blobs[name] || !MUSIC[name]) { pump(); return; }
+      fetching = true;
+      fetch(MUSIC[name].u).then((r) => (r.ok ? r.blob() : Promise.reject(r.status))).then((b) => { blobs[name] = URL.createObjectURL(b); })
+        .catch(() => {}).then(() => { fetching = false; pump(); });
+    }
+    function prefetch(names) { names.forEach((n) => { if (n && MUSIC[n] && !blobs[n] && !queue.includes(n)) queue.push(n); }); pump(); }
     function step() {
       let busy = false;
       decks.forEach((a, n) => {
@@ -859,7 +891,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     // the live player starts `name` from the beginning of its music
     function start(name) {
       const a = decks[live], from = info(name).s || 0;
-      if (a.dataset.track !== name) { a.src = info(name).u; a.dataset.track = name; }
+      const src = blobs[name] || info(name).u;
+      if (a.dataset.track !== name || a.dataset.src !== src) { a.src = src; a.dataset.track = name; a.dataset.src = src; }
       const seek = () => { try { a.currentTime = from; } catch (e) { /* not seekable yet */ } };
       if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
       a.volume = canFade ? 0 : 1;
@@ -896,6 +929,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     return {
       set(name) { want = MUSIC[name] ? name : ''; sync(); },
       sync,
+      prefetch,
       unlocked: () => unlocked,
     };
   })();
@@ -1428,6 +1462,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       .concat(bioOpen.size ? [{ t: 'Персонажи', on: () => openGM('bios') }] : [])  // its own screen, once someone has been met (17.10)
       .concat([{ t: 'Настройки', on: () => openGM('prefs') }, { t: 'Выйти', on: exitGame }]);
     CHAPTERS.forEach((ch) => { if (ch.cover) { const im = new Image(); im.src = ch.cover; } });  // the cover is ready before the shelf opens
+    music.prefetch([SHELF_MUSIC, musicOf(0)]);
     const tm = $('tm');
     if (!music.unlocked()) {
       tm.innerHTML = '<div class="tm-gate"><span>Нажмите, чтобы войти</span></div>';

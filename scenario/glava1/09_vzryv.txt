@@ -20,6 +20,7 @@
 @fx embers
 @flash
 @shake
+@sfx explosion
 1711 > Взрыв.
 1714 > Павлова отбрасывает на десять — пятнадцать метров.
 @fx smoke

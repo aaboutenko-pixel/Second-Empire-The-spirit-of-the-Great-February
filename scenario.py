@@ -80,7 +80,7 @@ def parse(text, fname='', state=None):
 
     def take(step):
         step['p'] = state['p']
-        for k in ('bg', 'on', 'x', 'id', 'role', 'fx', 'cg', 'once', 'music'):
+        for k in ('bg', 'on', 'x', 'id', 'role', 'fx', 'cg', 'once', 'music', 'sfx'):
             if k in pending:
                 step[k] = pending.pop(k)
         if 'e' in pending:
@@ -154,6 +154,8 @@ def parse(text, fname='', state=None):
                 pending['fx'] = arg
             elif word in ('shake', 'flash'):
                 pending.setdefault('once', []).append(word)
+            elif word == 'sfx':  # a sound on the next line: sfx/<name>.mp3 (17.10)
+                pending['sfx'] = arg
             elif word == 'on':
                 pending['on'] = arg.split() if arg else []
                 pending.setdefault('x', {})  # a new line-up drops old position overrides

@@ -49,6 +49,7 @@ LOGO = os.path.join(HERE, '..', 'logo', 'logo.png')  # the game's logo for the t
 CG_DIR = os.path.join(HERE, '..', 'cg')  # full-screen illustrations, id = file name = @cg in the script
 CHAPTERS_DIR = os.path.join(HERE, '..', 'chapters')  # chapter covers for the shelf, id = file name = 4th field of `title`
 BIOS_DIR = os.path.join(HERE, 'scenario', 'bio')  # character biographies, <who>.txt (scenario.load_bios)
+SFX_DIR = os.path.join(HERE, '..', 'sfx')  # sound effects, <name>.mp3|ogg|wav: '@sfx name' in the script; paper, wire for the cards
 MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without .mp3 = @music in the script
 # The version the players see, in the bottom right corner of the menus. Ours to change on releases worth naming, not
 # on every publish (the artifact counts those): 1.0 is chapter I as released (15.10), 1.1, 1.2 for its fixes, 2.0
@@ -259,6 +260,22 @@ def loop_points(path):
     return round(max(0.0, loud[0] * 0.1 - 0.05), 2), round((loud[-1] + 1) * 0.1, 2)
 
 
+def load_sfx():
+    """Sound effects copied as they are: { name: url }. CC0 recordings picked 17.10 (sources in sfx/SOURCES.txt)."""
+    out = {}
+    if not os.path.isdir(SFX_DIR):
+        return out
+    for name in sorted(os.listdir(SFX_DIR)):
+        stem, ext = os.path.splitext(name)
+        if ext.lower() not in ('.mp3', '.ogg', '.wav'):
+            continue
+        with open(os.path.join(SFX_DIR, name), 'rb') as f:
+            data = f.read()
+        out[stem], size = write_site(data, 'audio/sfx_%s%s' % (latin(stem), ext.lower()))
+        print('sfx', stem, size, 'bytes')
+    return out
+
+
 def load_music(only=None):
     """Copies the tracks next to the page as they are (no re-encoding); { name: {u: url, s: start, e: end} },
     name = file name, s/e = where the music begins and ends (loop_points). `only`: the names the script uses — the
@@ -410,6 +427,10 @@ def main():
     used_music = {s['music'] for s in steps if s.get('music')} | {state['title']['music'], state['title']['theme'], SHELF_MUSIC} - {''}
     sprites, backgrounds, cgs = load_sprites(), load_backgrounds(only=used_bg), load_backgrounds(CG_DIR, 'illustration', 'cg', only=used_cg)
     music = load_music(only=used_music)
+    sfx = load_sfx()
+    for s in steps:
+        if s.get('sfx') and s['sfx'] not in sfx:
+            print('sound missing (silence instead): sfx/%s.mp3' % s['sfx'])
     covers = load_backgrounds(CHAPTERS_DIR, 'cover', 'chapters')
     if state['title']['cover'] and state['title']['cover'] not in covers:
         print('cover missing (blank card): chapters/%s.png' % state['title']['cover'])
@@ -421,7 +442,7 @@ def main():
         if who not in characters:
             raise SystemExit('bio for unknown character: scenario/bio/%s.txt' % who)
     print('bios', ', '.join(sorted(bios)) or '(none)')
-    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'", "'__COVERS__'", "'__SHELF_MUSIC__'", "'__BIOS__'", "'__LINKS__'"):
+    for key in ("'__SPRITES__'", "'__BACKGROUNDS__'", "'__CGS__'", "'__MUSIC__'", "'__SCRIPT__'", "'__VERSION__'", "'__LOGO__'", "'__LOCKED__'", "'__COVERS__'", "'__SHELF_MUSIC__'", "'__BIOS__'", "'__LINKS__'", "'__SFX__'"):
         if html.count(key) != 1:
             raise SystemExit('template must contain the ' + key + ' placeholder exactly once')
     script = load_script(html, backgrounds, sprites, cgs, music)
@@ -429,7 +450,7 @@ def main():
             .replace("'__CGS__'", json.dumps(cgs)).replace("'__MUSIC__'", json.dumps(music, ensure_ascii=False)).replace("'__SCRIPT__'", json.dumps(script, ensure_ascii=False))
             .replace("'__VERSION__'", json.dumps('версия ' + GAME_VERSION, ensure_ascii=False))
             .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED)).replace("'__COVERS__'", json.dumps(covers)).replace("'__SHELF_MUSIC__'", json.dumps(SHELF_MUSIC, ensure_ascii=False)).replace("'__BIOS__'", json.dumps(bios, ensure_ascii=False))
-            .replace("'__LINKS__'", json.dumps({'share': SHARE_URL, 'feedback': FEEDBACK_URL}))
+            .replace("'__LINKS__'", json.dumps({'share': SHARE_URL, 'feedback': FEEDBACK_URL})).replace("'__SFX__'", json.dumps(sfx))
             .replace("'__LOGO__'", json.dumps(load_logo())))
     with open(os.path.join(SITE, 'sobor-1922.html'), 'w', encoding='utf-8') as f:
         f.write(html)
