@@ -167,7 +167,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 .curtain-load{position:absolute;left:50%;bottom:14cqh;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:1.8cqh;font-family:var(--f-mono);font-size:2cqh;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
 .curtain-load.show{display:flex}
 .curtain-load i{display:block;width:26cqw;height:2px;background:var(--line);position:relative;overflow:hidden}
-.curtain-load i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold);animation:load-fill 1.5s ease-in-out forwards}
+.curtain-load i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold);animation:load-fill .8s ease-in-out forwards}
 @keyframes load-fill{to{width:100%}}
 /* The chapter shelf (17.10, the organizer's sketch): one wide cover in the middle, arrows at the sides, the years and
    the progress under it, the buttons at the bottom. A cover is a finished picture with its own lettering — every chapter
@@ -175,22 +175,23 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
    music for the shelf (5th field of `title`); the title's march fades out on the way here. */
 .sh{position:absolute;inset:0;z-index:8;display:none;background:radial-gradient(90cqw 80cqh at 50% 35%, #1b120e, #070505 85%)}
 .stage.shelf .sh{display:block}
-.sh-h{position:absolute;left:0;right:0;top:4.6cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.36em;text-transform:uppercase;color:var(--muted)}
-.sh-card{position:absolute;left:50%;top:11.5cqh;width:60cqw;aspect-ratio:16/9;transform:translateX(-50%);border-radius:1.2cqh;overflow:hidden;background:#120c0a;box-shadow:0 2cqh 6cqh rgba(0,0,0,.85),0 0 0 1px rgba(207,168,80,.4);cursor:pointer;animation:sh-in .5s ease-out both}
+/* the label sits bottom right, away from the top strip Telegram draws its buttons on (the organizer, 17.10) */
+.sh-h{position:absolute;right:3cqw;bottom:7cqh;margin:0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.36em;text-transform:uppercase;color:var(--muted)}
+.sh-card{position:absolute;left:50%;top:15cqh;width:60cqw;aspect-ratio:16/9;transform:translateX(-50%);border-radius:1.2cqh;overflow:hidden;background:#120c0a;box-shadow:0 2cqh 6cqh rgba(0,0,0,.85),0 0 0 1px rgba(207,168,80,.4);cursor:pointer;animation:sh-in .5s ease-out both}
 .sh-card img{display:block;width:100%;height:100%;object-fit:cover}
 .sh-card.locked img{filter:grayscale(.8) brightness(.45)}
 @keyframes sh-in{from{opacity:0;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1)}}
-.sh-arrow{position:absolute;top:11.5cqh;height:60cqh;width:14cqw;display:grid;place-items:center;appearance:none;background:none;border:0;color:var(--bone);font-family:var(--f-display);font-size:11cqh;line-height:1;cursor:pointer;opacity:.7}
+.sh-arrow{position:absolute;top:15cqh;height:60cqh;width:14cqw;display:grid;place-items:center;appearance:none;background:none;border:0;color:var(--bone);font-family:var(--f-display);font-size:11cqh;line-height:1;cursor:pointer;opacity:.7}
 .sh-arrow.l{left:1cqw}.sh-arrow.r{right:1cqw}
 .sh-arrow:disabled{opacity:.12;cursor:default}
 .sh-arrow:hover:not(:disabled),.sh-arrow:focus-visible{opacity:1;outline:none}
-.sh-info{position:absolute;left:0;right:0;top:74.5cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;color:var(--muted)}
+.sh-info{position:absolute;left:0;right:0;top:78.5cqh;margin:0;text-align:center;font-family:var(--f-mono);font-size:2.2cqh;letter-spacing:.1em;color:var(--muted)}
 .sh-info b{font-weight:500;color:var(--fg)}
-.sh-nav{position:absolute;left:0;right:0;bottom:6cqh;display:flex;justify-content:center;gap:2.4cqw}
+.sh-nav{position:absolute;left:0;right:0;bottom:5cqh;display:flex;justify-content:center;gap:2.4cqw}
 .sh-btn{appearance:none;background:none;border:1px solid var(--line);border-radius:999px;color:var(--fg);font-family:var(--f-display);font-size:3.4cqh;line-height:1.2;padding:.35em 1.3em;cursor:pointer}
 .sh-btn:hover,.sh-btn:focus-visible{border-color:var(--gold);color:var(--gold);outline:none}
 .sh-btn.ghost{color:var(--muted)}
-.sh-back{position:absolute;left:3cqw;bottom:7cqh;appearance:none;background:none;border:0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.1em;color:var(--muted);cursor:pointer}
+.sh-back{position:absolute;left:3cqw;bottom:7cqh;z-index:1;appearance:none;background:none;border:0;font-family:var(--f-mono);font-size:2.1cqh;letter-spacing:.1em;color:var(--muted);cursor:pointer}
 .sh-back:hover,.sh-back:focus-visible{color:var(--fg);outline:none}
 
 /* Main menu (15.10): the organizer's cabinet backdrop in full, drifting slowly, dust in the air. The logo top left
@@ -1159,21 +1160,21 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const CHAPTERS = [{ id: SCRIPT.title.cover || 'prolog', t: SCRIPT.title, cover: COVERS[SCRIPT.title.cover] || '' }];
   let shelfOpen = false, shelfAt = 0;
   const sh = $('sh');
-  // how far the autosave is: the number of the scene it is in, 1-based
-  const sceneNumber = (i) => SCRIPT.scenes.filter((sc) => at(sc.id) <= i).length;
-  // «Начать» on the title: the music goes, a loading curtain, then the shelf (the organizer, 17.10: not «моментально»,
-  // the march must not cut straight into another tune)
-  function openShelf() {
+  // Between the title and the shelf, both ways (the organizer, 17.10: not «моментально», the march must not cut straight
+  // into another tune): the music goes, the curtain falls with a short loading line, the other screen is drawn under it.
+  function loadThen(apply) {
     music.set('');
     clearTimeout(curtainTimer);
     curtainText.classList.remove('show');
     $('curtainLoad').classList.add('show');
     curtain.classList.add('on');
     curtainTimer = setTimeout(() => {
-      shelfOpen = true; shelfAt = 0; render();
-      curtainTimer = setTimeout(() => { $('curtainLoad').classList.remove('show'); curtain.classList.remove('on'); }, 1500);
+      apply();
+      curtainTimer = setTimeout(() => { $('curtainLoad').classList.remove('show'); curtain.classList.remove('on'); }, 900);
     }, 480);
   }
+  const openShelf = () => loadThen(() => { shelfOpen = true; shelfAt = 0; render(); });
+  const shelfToTitle = () => loadThen(() => { shelfOpen = false; render(); });
   function shelfMove(d) {
     const to = Math.max(0, Math.min(CHAPTERS.length - 1, shelfAt + d));
     if (to !== shelfAt) { shelfAt = to; shelfScreen(); }
@@ -1186,7 +1187,6 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     $('tm').hidden = true; menu.hidden = true; menu.innerHTML = ''; layer.hidden = true; layer.innerHTML = ''; box.innerHTML = '';
     const ch = CHAPTERS[shelfAt], last = store.get('auto', null), done = !!store.get('done', {})[ch.id];
     music.set(ch.t.theme || '');
-    const status = done ? 'пройдено' : last ? 'читается · сцена ' + sceneNumber(last.cur) + ' из ' + SCRIPT.scenes.length : 'не начато';
     const btns = [];
     if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => withCurtain(steps[last.cur] ? steps[last.cur].p : '', () => restore(last))) });
     btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => withCurtain(steps[0].p, () => jumpTo('restart'))) });
@@ -1195,14 +1195,14 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       + '<button class="sh-arrow l" type="button" aria-label="Предыдущая глава"' + (shelfAt > 0 ? '' : ' disabled') + '>‹</button>'
       + '<div class="sh-card" role="button" tabindex="0" aria-label="' + esc(ch.t.name) + '">' + (ch.cover ? '<img src="' + ch.cover + '" alt="">' : '') + '</div>'
       + '<button class="sh-arrow r" type="button" aria-label="Следующая глава"' + (shelfAt < CHAPTERS.length - 1 ? '' : ' disabled') + '>›</button>'
-      + '<p class="sh-info"><b>' + esc(ch.t.span) + '</b> · ' + esc(status) + '</p>'
+      + '<p class="sh-info"><b>' + esc(ch.t.span) + '</b></p>'  // only the years: the organizer wants no «не начато / сцена N» here (17.10)
       + '<nav class="sh-nav">' + btns.map((b, n) => '<button class="sh-btn' + (b.ghost ? ' ghost' : '') + '" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
       + '<button class="sh-back" type="button">← На титул</button>';
     sh.querySelectorAll('.sh-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); btns[+el.dataset.n].on(); }));
     sh.querySelector('.sh-card').addEventListener('click', (e) => { e.stopPropagation(); btns[0].on(); });
     sh.querySelector('.sh-arrow.l').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(-1); });
     sh.querySelector('.sh-arrow.r').addEventListener('click', (e) => { e.stopPropagation(); shelfMove(1); });
-    sh.querySelector('.sh-back').addEventListener('click', (e) => { e.stopPropagation(); shelfOpen = false; render(); });
+    sh.querySelector('.sh-back').addEventListener('click', (e) => { e.stopPropagation(); shelfToTitle(); });
   }
   // a swipe across the shelf turns the page
   let swipeX = null;
@@ -1521,7 +1521,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   }, { passive: true });
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-    if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); else if (shelfOpen) { shelfOpen = false; render(); } return; }
+    if (e.key === 'Escape') { e.preventDefault(); if (!gm.hidden) closeGM(); else if (cur >= 0) openGM('prefs'); else if (shelfOpen) shelfToTitle(); return; }
     if (!gm.hidden) return;
     if (stage.classList.contains('clean')) { e.preventDefault(); stage.classList.remove('clean'); return; }
     if (cur < 0 && shelfOpen) {
