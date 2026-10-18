@@ -61,10 +61,9 @@ SCENES_LOCKED = False
 # The chapter shelf's music (a file in music/ without .mp3): plays on the shelf for every chapter until a chapter brings
 # its own (5th field of `title`). Empty = silence after the title's march. The organizer sends the track (17.10).
 SHELF_MUSIC = 'Пролог'
-# «Поделиться» and «Отзыв» on the title (17.10). SHARE_URL: what is shared — empty = the page's own address (set the
-# bot's t.me link when there is one). FEEDBACK_URL: where «Отзыв» leads — the organizer's Telegram.
+# «Поделиться» on the title (17.10). SHARE_URL: what is shared — empty = the page's own address (set the bot's t.me link
+# when there is one). «Отзыв» and FEEDBACK_URL were removed 18.10: the organizer collects feedback another way.
 SHARE_URL = ''
-FEEDBACK_URL = 'https://t.me/MannerheimFM'
 CHAPTER = os.path.join(HERE, 'scenario', 'glava1')  # the chapter text, see scenario.py for the format
 SITE = os.path.join(HERE, 'site')
 # Aligning a set takes about a minute, so finished sprites are kept in .cache/sprites/<who>/<look>/<key>/ and reused
@@ -472,7 +471,7 @@ def main():
             .replace("'__CGS__'", json.dumps(cgs)).replace("'__MUSIC__'", json.dumps(music, ensure_ascii=False)).replace("'__SCRIPT__'", json.dumps(script, ensure_ascii=False))
             .replace("'__VERSION__'", json.dumps('версия ' + GAME_VERSION, ensure_ascii=False))
             .replace("'__LOCKED__'", json.dumps(SCENES_LOCKED)).replace("'__COVERS__'", json.dumps(covers)).replace("'__SHELF_MUSIC__'", json.dumps(SHELF_MUSIC, ensure_ascii=False)).replace("'__BIOS__'", json.dumps(bios, ensure_ascii=False))
-            .replace("'__LINKS__'", json.dumps({'share': SHARE_URL, 'feedback': FEEDBACK_URL})).replace("'__SFX__'", json.dumps(sfx))
+            .replace("'__LINKS__'", json.dumps({'share': SHARE_URL})).replace("'__SFX__'", json.dumps(sfx))
             .replace("'__LOGO__'", json.dumps(load_logo())))
     with open(os.path.join(SITE, 'sobor-1922.html'), 'w', encoding='utf-8') as f:
         f.write(html)

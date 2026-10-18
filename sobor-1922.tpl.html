@@ -427,7 +427,8 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // Character biographies (scenario/bio/<who>.txt, 17.10): { who: { full, sections: [{ ch, paras }] } }. A card opens
   // the first time the character stands on the stage; its chapters open as the reader reaches them.
   const BIOS = '__BIOS__';
-  // «Поделиться» / «Отзыв» on the title: { share: url or '', feedback: url } (SHARE_URL, FEEDBACK_URL in build.py).
+  // «Поделиться» on the title: { share: url or '' } (SHARE_URL in build.py). «Отзыв» was taken off the title 18.10: the
+  // organizer collects feedback another way.
   const LINKS = '__LINKS__';
   // Sound effects: sfx/<name>.mp3 copied next to the page, as { name: url } ('@sfx name' in the script; paper, wire on the cards).
   const SFX = '__SFX__';
@@ -1417,7 +1418,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (Math.abs(dx) > 40) shelfMove(dx < 0 ? 1 : -1);
   }, { passive: true });
 
-  // «Поделиться» (the organizer, 17.10: «нам нужна аудитория») and «Отзыв» (a chat with the organizer). Inside Telegram
+  // «Поделиться» (the organizer, 17.10: «нам нужна аудитория»). Inside Telegram
   // the links open through the app; in a browser, the share sheet where there is one, else Telegram's share page.
   const GAME_URL = () => LINKS.share || location.href.split(/[?#]/)[0];
   function openLink(url) {
@@ -1462,10 +1463,10 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
               : '<h1 class="tm-h tm-name">' + esc(SCRIPT.title.name) + '</h1>')
       + '<nav class="tm-nav" aria-label="Главное меню">'
       + items.map((b, n) => '<button class="tm-btn" type="button" data-n="' + n + '">' + esc(b.t) + '</button>').join('') + '</nav>'
-      + '<p class="tm-links"><button class="tm-link" type="button" data-link="share">Поделиться</button><span>·</span><button class="tm-link" type="button" data-link="feedback">Отзыв</button></p>'
+      + '<p class="tm-links"><button class="tm-link" type="button" data-link="share">Поделиться</button></p>'
       + '<div class="tm-fade"></div>';
     tm.querySelectorAll('.tm-btn').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); items[+el.dataset.n].on(); }));
-    tm.querySelectorAll('.tm-link').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); if (el.dataset.link === 'share') shareGame(); else openLink(LINKS.feedback); }));
+    tm.querySelectorAll('.tm-link').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); shareGame(); }));
     tm.hidden = false;
   }
 
