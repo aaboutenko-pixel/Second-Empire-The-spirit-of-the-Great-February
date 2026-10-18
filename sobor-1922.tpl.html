@@ -1834,9 +1834,16 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       timers[key] = setTimeout(() => flush(key), key === 'seen' ? 5000 : 1200);  // the read marks are many small writes: rarer
     }
     function flushAll() { Object.keys(pending).forEach((k) => { clearTimeout(timers[k]); flush(k); }); }
-    document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
+    // hidden: whatever is pending goes up now; shown again: the other device may have played meanwhile, so the cloud is
+    // read again (the organizer switched from the phone to Telegram Desktop with both open, 18.10)
+    let pulling = false;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); else if (!pulling) pull(); });
     // the cloud read into this device: what the other devices did since
     async function pull() {
+      pulling = true;
+      try { await pullNow(); } finally { pulling = false; }
+    }
+    async function pullNow() {
       const got = await call('getItems', KEYS.concat(['seen_n'])) || {};
       const parse = (t) => { try { return t ? JSON.parse(t) : null; } catch (e) { return null; } };
       seenChunks = parseInt(got.seen_n || '0', 10) || 0;
