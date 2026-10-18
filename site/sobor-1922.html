@@ -1429,7 +1429,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     window.open(url, '_blank', 'noopener');
   }
   function shareGame() {
-    const url = GAME_URL(), text = 'Second Empire — визуальная новелла по ролевой «Российская империя»';
+    const url = GAME_URL(), text = 'Second Empire — визуальная новелла по альтернативной истории России, созданной комьюнити Альтернативного FM и Нейрокосмоса';
     if (!TG && navigator.share) { navigator.share({ title: 'Second Empire', text, url }).catch(() => {}); return; }
     openLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
   }
