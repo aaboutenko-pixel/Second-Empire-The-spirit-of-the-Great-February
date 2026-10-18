@@ -439,7 +439,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   const VERSION = "версия 1.0";
   // Release builds (SCENES_LOCKED in build.py): the scene list opens only scenes the reader has reached; the others
   // are listed without titles and cannot be jumped to (17.10).
-  const LOCKED = false;
+  const LOCKED = true;
   // The game's logo (logo/logo.png, by the organizer, 15.10): the main menu shows it instead of the chapter name.
   const LOGO = "img/logo.webp?v=49a2897d";
   document.getElementById('curtainLoad').insertAdjacentHTML('afterbegin', LOGO ? '<img src="' + LOGO + '" alt="Second Empire">' : '<span>Загрузка</span>');

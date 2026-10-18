@@ -57,7 +57,7 @@ MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without 
 GAME_VERSION = '1.0'
 # Release builds lock the scene list: a reader can jump only to scenes already reached, the rest are shown without
 # titles (the organizer, 17.10: «чтобы людям было интересно, а то будут скипать»). False while the organizer tests.
-SCENES_LOCKED = False
+SCENES_LOCKED = True
 # The chapter shelf's music (a file in music/ without .mp3): plays on the shelf for every chapter until a chapter brings
 # its own (5th field of `title`). Empty = silence after the title's march. The organizer sends the track (17.10).
 SHELF_MUSIC = 'Пролог'
