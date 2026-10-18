@@ -67,7 +67,7 @@ paper 834 | Кашубские Ребята | Данциг | Шестой ден
 
 @music Императорские проблемы
 @bg kabinet_emperor
-@fx none
+@fx dust
 @on kryukov
 @e kryukov=original
 856 > Заявление из Москвы.
