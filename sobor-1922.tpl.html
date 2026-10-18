@@ -1066,7 +1066,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   function toTitleNow() { stopAll(); hist = []; cur = -1; shelfOpen = false; closeGM(); render(); }
   function toTitle() { stopAll(); closeGM(); loadThen(toTitleNow); }
   function jumpTo(target) {
-    if (target === 'restart') { stopAll(); hist = []; cur = 0; render(); }
+    if (target === 'restart') { stopAll(); hist = []; mark = -1; cur = 0; render(); }
     else if (target === 'title') toTitle();
     else if (target === 'next') go(cur + 1);
     else go(at(target));
@@ -1180,7 +1180,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     if (sprite && !sprite.emotions[bioSel.e]) bioSel.e = emos.includes('original') ? 'original' : emos[0];
     const reached = new Set([SCRIPT.title.name]);  // chapters the reader has: this one (more when there are more)
     const sections = b.sections.filter((sec) => reached.has(sec.ch));
-    const role = cur >= 0 ? roleOf(cur, who) : (c.looks ? (c.looks[looks[0]] || {}).r || '' : c.r || '');
+    const last = store.get('auto', null), through = !!store.get('done', {})[CHAPTERS[0].id];
+    const asOf = cur >= 0 ? cur : (last && last.cur < steps.length ? last.cur : (through ? steps.length - 1 : -1));
+    const role = asOf >= 0 ? roleOf(asOf, who) : (c.looks ? (c.looks[looks[0]] || {}).r || '' : c.r || '');
     // the heading stands in the list column, level with the name on the card (the organizer, 17.10)
     gmBody.innerHTML = '<div class="bio">'
       + '<nav class="bio-list"><h2 class="gm-h bio-h">Персонажи</h2>' + list.map((w) => '<button type="button" class="bio-who' + (w === who ? ' on' : '') + '" data-bio="' + w + '">' + esc(CH[w].n) + '</button>').join('') + '</nav>'
@@ -1385,8 +1387,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     music.set(ch.t.theme || SHELF_MUSIC || '');
     const btns = [];
     if (ch.soon) { /* no buttons: there is nothing to start yet */ } else {
-    if (last && !done) btns.push({ t: 'Продолжить', on: () => startChapter(() => loadThen(() => restore(last))) });
-    btns.push({ t: last && !done ? 'Сначала' : 'Начать', ghost: !!(last && !done), on: () => startChapter(() => loadThen(() => jumpTo('restart'))) });
+    // an autosave gives «Продолжить» even after the credits were seen once: a second reading must not restart from the cover (18.10)
+    if (last) btns.push({ t: 'Продолжить', on: () => startChapter(() => loadThen(() => restore(last))) });
+    btns.push({ t: last ? 'Сначала' : 'Начать', ghost: !!last, on: () => startChapter(() => loadThen(() => jumpTo('restart'))) });
     if (done) btns.push({ t: 'Титры', ghost: true, on: () => startChapter(() => { const i = steps.findIndex((s) => s.k === 'credits'); if (i >= 0) loadThen(() => goNow(i)); }) });
     }
     const chevron = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
