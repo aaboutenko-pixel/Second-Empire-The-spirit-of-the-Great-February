@@ -63,7 +63,7 @@ SCENES_LOCKED = True
 SHELF_MUSIC = 'Пролог'
 # «Поделиться» on the title (17.10). SHARE_URL: what is shared — empty = the page's own address (set the bot's t.me link
 # when there is one). «Отзыв» and FEEDBACK_URL were removed 18.10: the organizer collects feedback another way.
-SHARE_URL = ''
+SHARE_URL = 'https://t.me/AFM_Kryukov_bot'
 CHAPTER = os.path.join(HERE, 'scenario', 'glava1')  # the chapter text, see scenario.py for the format
 SITE = os.path.join(HERE, 'site')
 # Aligning a set takes about a minute, so finished sprites are kept in .cache/sprites/<who>/<look>/<key>/ and reused
