@@ -506,7 +506,9 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
     // voices without a figure
     crowd:       { n: 'Голоса из толпы', r: '', c: 'var(--muted)', voice: true },
     peasant:     { n: 'Крестьянин', r: '', c: 'var(--muted)', voice: true },
-    kurilo:      { n: 'Курило', r: 'сельский староста', c: 'var(--muted)', voice: true },  // the barn, 18.10
+    kurilo: { n: 'Курило', c: 'var(--sand)', looks: {  // the barn, 18.10: the organizer's picture sprites/other/kurilo.png
+      kurilo: { r: 'сельский староста', top: 22, h: 60 },  // drawn close to the camera, cut at the knees: measure_faces 18.10 (face 228 px at h 100 → h 60, top 22)
+    } },
     ostap:       { n: 'Остап', r: 'крестьянин', c: 'var(--muted)', voice: true },
     kazak:       { n: 'Казак', r: '', c: 'var(--muted)', voice: true },
     witness:     { n: 'Очевидец', r: 'село под Картузами', c: 'var(--muted)', voice: true },
