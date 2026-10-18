@@ -947,10 +947,13 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       if (localStorage.getItem(KEY + k) === null && localStorage.getItem(OLD + k) !== null) localStorage.setItem(KEY + k, localStorage.getItem(OLD + k));
     }
   } catch (e) { /* no storage: nothing to carry */ }
+  // Inside Telegram the progress is also kept in the bot's cloud (see `cloud` below): every write and drop goes there too.
+  let cloudHook = null;
   const store = {
     get(k, d) { try { const v = localStorage.getItem(KEY + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* private window: nothing is kept */ } },
-    drop(k) { try { localStorage.removeItem(KEY + k); } catch (e) { /* nothing to drop */ } },
+    set(k, v) { this.local(k, v); if (cloudHook) cloudHook(k, v); },
+    drop(k) { try { localStorage.removeItem(KEY + k); } catch (e) { /* nothing to drop */ } if (cloudHook) cloudHook(k, null); },
+    local(k, v) { try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* private window: nothing is kept */ } },
   };
   const prefs = Object.assign({ speed: 6, auto: 5, skipUnseen: false, music: 6, mute: false, fullscreen: true }, store.get('prefs', {}));
   // Full screen (15.10): on by default, asked for on the reader's first click (browsers allow it only in a gesture)
@@ -1782,9 +1785,96 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
 
   $('qm').querySelector('[data-q="sound"]').classList.toggle('muted', !!prefs.mute);
 
+  // ---------- the cloud: progress shared between the reader's devices (18.10) ----------
+  // Opened through the bot, the game keeps the autosave, the read lines, the opened biographies and «пройдено» in
+  // Telegram's CloudStorage (Bot API 6.9): one store per user and bot, the same on the phone, in Telegram Desktop and
+  // in the web client. The organizer: «хочешь на ПК играй, потом продолжить на телефоне». The site opened in a plain
+  // browser has no account and stays local. On start the cloud is read and merged into this device: the newer
+  // autosave wins, the read lines and biographies are joined; then every change goes up (1.2 s after the last one,
+  // at once when the app is hidden). Values are capped at 4096 characters, so the read marks go in numbered chunks
+  // (seen_n = how many, seen_0, seen_1…) and a too long autosave drops its history. Settings stay on the device:
+  // the full screen and the volume are about the device, not the reader.
+  const cloud = (() => {
+    const cs = TG && TG.CloudStorage && TG.isVersionAtLeast && TG.isVersionAtLeast('6.9') ? TG.CloudStorage : null;
+    if (!cs) return { on: false, pull: () => Promise.resolve() };
+    const CHUNK = 3800, LIMIT = 4000, KEYS = ['auto', 'bios', 'done'];
+    const timers = {}, pending = {};
+    let seenChunks = 0, lastParts = [];
+    const call = (name, ...args) => new Promise((ok) => {
+      try { cs[name](...args, (err, res) => ok(err ? null : res)); } catch (e) { ok(null); }
+    });
+    const fit = (v) => {  // the autosave shortened to the cloud's limit
+      let t = JSON.stringify(v);
+      if (t.length <= LIMIT || !v || !v.hist) return t;
+      const c = Object.assign({}, v);
+      for (const n of [150, 60, 20, 0]) { c.hist = v.hist.slice(-n); t = JSON.stringify(c); if (t.length <= LIMIT) return t; }
+      return t;
+    };
+    async function flush(key) {
+      const v = pending[key]; delete pending[key];
+      if (key === 'seen') {
+        const text = (v || []).join(','), parts = [];
+        for (let i = 0; i < text.length; i += CHUNK) parts.push(text.slice(i, i + CHUNK));
+        for (let i = 0; i < parts.length; i++) if (parts[i] !== lastParts[i]) await call('setItem', 'seen_' + i, parts[i]);
+        if (parts.length !== seenChunks) await call('setItem', 'seen_n', String(parts.length));
+        lastParts = parts;
+        const stale = [];
+        for (let i = parts.length; i < seenChunks; i++) stale.push('seen_' + i);
+        if (stale.length) await call('removeItems', stale);
+        seenChunks = parts.length;
+      } else if (v === null || v === undefined) {
+        if (key === 'auto') await call('setItem', key, JSON.stringify({ gone: Date.now() }));  // a dated tombstone: the other device drops its older save
+        else await call('removeItems', [key]);
+      } else await call('setItem', key, fit(v));
+    }
+    function write(key, value) {
+      if (key !== 'seen' && !KEYS.includes(key)) return;  // prefs are the device's own
+      pending[key] = value;
+      clearTimeout(timers[key]);
+      timers[key] = setTimeout(() => flush(key), key === 'seen' ? 5000 : 1200);  // the read marks are many small writes: rarer
+    }
+    function flushAll() { Object.keys(pending).forEach((k) => { clearTimeout(timers[k]); flush(k); }); }
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
+    // the cloud read into this device: what the other devices did since
+    async function pull() {
+      const got = await call('getItems', KEYS.concat(['seen_n'])) || {};
+      const parse = (t) => { try { return t ? JSON.parse(t) : null; } catch (e) { return null; } };
+      seenChunks = parseInt(got.seen_n || '0', 10) || 0;
+      let cloudSeen = [];
+      if (seenChunks) {
+        const names = []; for (let i = 0; i < seenChunks; i++) names.push('seen_' + i);
+        const parts = await call('getItems', names) || {};
+        cloudSeen = names.map((n) => parts[n] || '').join('').split(',').filter(Boolean);
+      }
+      const a = parse(got.auto), l = store.get('auto', null);
+      let changed = false;
+      // a key this device is about to write is its own: the cloud's copy of it is not taken (the credits drop the autosave
+      // a moment before the cloud answers, 18.10)
+      if (a && !('auto' in pending)) {
+        if (a.gone) { if (l && a.gone > (l.date || 0)) { try { localStorage.removeItem(KEY + 'auto'); } catch (e) {} changed = true; } }
+        else if (!l || (a.date || 0) > (l.date || 0)) { store.local('auto', a); changed = true; }
+      }
+      const bios = parse(got.bios) || [];
+      bios.forEach((w) => { if (!bioOpen.has(w)) { bioOpen.add(w); changed = true; } });
+      store.local('bios', [...bioOpen]);
+      const done = Object.assign({}, parse(got.done) || {}, store.get('done', {}));
+      Object.keys(parse(got.done) || {}).forEach((k) => { if (!store.get('done', {})[k]) changed = true; });
+      store.local('done', done);
+      const before = seen.size;
+      cloudSeen.forEach((h) => seen.add(h));
+      if (seen.size !== before) { changed = true; store.local('seen', [...seen]); }
+      // both sides now hold the union; the cloud gets it back so the other device sees the same
+      write('auto', store.get('auto', null)); write('bios', [...bioOpen]); write('done', done); write('seen', [...seen]);
+      if (changed && cur < 0) render();  // the title shows «Продолжить» and «Персонажи» for what came down
+    }
+    cloudHook = write;
+    return { on: true, pull };
+  })();
+
   // deep link for testing: #<scene id> opens that scene
   const deep = location.hash.slice(1);
   if (deep && at(deep) >= 0) cur = at(deep);
   render();
+  cloud.pull();
 })();
 </script>
