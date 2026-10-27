@@ -54,7 +54,7 @@ MUSIC_DIR = os.path.join(HERE, '..', 'music')  # tracks, id = file name without 
 # The version the players see, in the bottom right corner of the menus. Ours to change on releases worth naming, not
 # on every publish (the artifact counts those): 1.0 is chapter I as released (15.10), 1.1, 1.2 for its fixes, 2.0
 # with chapter II.
-GAME_VERSION = '1.0'
+GAME_VERSION = '1.0.1'
 # Release builds lock the scene list: a reader can jump only to scenes already reached, the rest are shown without
 # titles (the organizer, 17.10: «чтобы людям было интересно, а то будут скипать»). False while the organizer tests.
 SCENES_LOCKED = True
