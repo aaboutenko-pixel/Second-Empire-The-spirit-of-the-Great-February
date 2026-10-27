@@ -1166,6 +1166,23 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       if (!mode.skip) { bioQueue.push(CH[w].n); bioPlate(); }
     });
   }
+  // Catch-up (1.0.1, 27.10): a card added to the game after the reader passed its character's entry (Ткаченко, 23.10)
+  // never opened for him. So on start, and after the cloud brings progress, every character met up to the autosave
+  // (the whole chapter once it is through) is opened silently. Returns whether anything was added.
+  function catchUpBios() {
+    const last = store.get('auto', null), through = !!store.get('done', {})[CHAPTERS[0].id];
+    const upto = through ? steps.length - 1 : (last && last.cur < steps.length ? last.cur : -1);
+    let on = [], added = false;
+    for (let i = 0; i <= upto; i++) {
+      const st = steps[i];
+      if (st.on) on = st.on;
+      on.concat(st.k === 'say' && st.w ? [st.w] : []).forEach((w) => {
+        if (BIOS[w] && CH[w] && !bioOpen.has(w)) { bioOpen.add(w); added = true; }
+      });
+    }
+    if (added) store.set('bios', [...bioOpen]);
+    return added;
+  }
   // the card: which character, look and emotion are shown
   const bioSel = { who: null, look: null, e: 'original' };
   const EMO_NAMES = { original: 'обычный', happy: 'рад', sad: 'грустит', angry: 'злится', shocked: 'поражён', thinking: 'думает', unhappy: 'недоволен', embarassed: 'смущён', embarrassed: 'смущён', emberassed: 'смущён', embarrased: 'смущён' };
@@ -1867,6 +1884,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
       const done = Object.assign({}, parse(got.done) || {}, store.get('done', {}));
       Object.keys(parse(got.done) || {}).forEach((k) => { if (!store.get('done', {})[k]) changed = true; });
       store.local('done', done);
+      if (catchUpBios()) changed = true;  // progress from the other device may reach cards this one never opened
       const before = seen.size;
       cloudSeen.forEach((h) => seen.add(h));
       if (seen.size !== before) { changed = true; store.local('seen', [...seen]); }
@@ -1881,6 +1899,7 @@ body{height:100%;margin:0;padding-block:12px;padding-inline:16px;background:var(
   // deep link for testing: #<scene id> opens that scene
   const deep = location.hash.slice(1);
   if (deep && at(deep) >= 0) cur = at(deep);
+  catchUpBios();
   render();
   cloud.pull();
 })();
